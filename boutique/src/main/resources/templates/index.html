@@ -1,0 +1,480 @@
+<!-- Full-featured index.html modeled after Anvi Studio - hero slider, categories, new arrivals, best sellers, floating WhatsApp, sticky offer bar, responsive, dots, fade, swipe -->
+<!DOCTYPE html>
+<!-- CRITICAL: Ensure xmlns:sec is here to use security tags -->
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="utf-8" />
+    <title>Anvi Studio - Ethnic and Fashion Boutique</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <!-- Fonts + Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+    <style>
+        :root{
+            --brand:#ff7c04;
+            --dark:#222;
+            --muted:#6c757d;
+        }
+        body { font-family: 'Roboto', sans-serif; color: #222; }
+
+        /* sticky offer bar */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+        .offer-bar a{ color:var(--brand); text-decoration:none; font-weight:600; }
+
+        /* NAVBAR */
+        .main-nav{ background:#000; color:#fff; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover{ color:var(--brand); }
+
+        /* HERO: fade slider + dots */
+        .hero-banner { position:relative; width:100%; overflow:hidden; }
+        .slides { position:relative; height:100vh; }
+        .slide { position:absolute; inset:0; opacity:0; transition:opacity 1s ease-in-out; }
+        .slide.active{ opacity:1; z-index:2; }
+        .slide img{ width:100%; height:100%; object-fit:cover; display:block; }
+        .slide-overlay{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 100%); }
+        .slide-content{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; color:#fff; z-index:3; max-width:900px; padding:30px; }
+        .slide-content h1{ font-family:'Playfair Display',serif; font-size:3.6rem; margin-bottom:18px; letter-spacing:0.8px; }
+        .slide-content p.lead{ font-size:1.05rem; margin-bottom:22px; color:#f6f6f6; opacity:0.95; }
+        .btn-cta{ background:var(--brand); border:none; padding:12px 30px; font-size:1.05rem; border-radius:6px; }
+
+        /* nav arrows */
+        .hero-arrow{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:#fff; border:none; width:48px; height:48px; border-radius:6px; font-size:1.4rem; z-index:10; }
+        .hero-arrow.left{ left:20px; }
+        .hero-arrow.right{ right:20px; }
+
+        /* dots */
+        .slider-dots{ position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:12; }
+        .slider-dots button{ width:12px; height:12px; border-radius:50%; border:none; background:rgba(255,255,255,0.6); cursor:pointer; }
+        .slider-dots button.active{ background:var(--brand); }
+
+        /* Category cards */
+        .category-card{ border-radius:12px; overflow:hidden; transition:transform .3s, box-shadow .3s; }
+        .category-card:hover{ transform:translateY(-6px); box-shadow:0 18px 40px rgba(0,0,0,0.12); }
+
+        /* New arrivals grid */
+        .product-card{ border-radius:12px; overflow:hidden; border:1px solid #eee; }
+        .product-card .card-img-top{ height:300px; object-fit:cover; }
+
+        /* floating whatsapp */
+        .whatsapp-float{ position:fixed; right:18px; bottom:18px; background:#25D366; width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.6rem; z-index:999; box-shadow:0 8px 20px rgba(0,0,0,0.2); }
+
+        /* responsive tweaks */
+        @media(max-width:992px){ .slide-content h1{ font-size:2.4rem; } .slide-content p.lead{ font-size:1rem; } }
+        @media(max-width:576px){ .slide-content{ padding:18px; } .slide-content h1{ font-size:1.6rem; } .slide-content p.lead{ display:none; } }
+
+        /* FIX FOR ICON ALIGNMENT: Ensures icons are displayed inline with links */
+        .navbar-nav { align-items: center; }
+    </style>
+</head>
+<body>
+
+<!-- Offer bar -->
+<div class="offer-bar text-center">
+    <div class="container">Free Shipping on Orders Above ₹1999 — Use code <a href="#">FREESHIP</a></div>
+</div>
+
+<!-- Updated NAVBAR Section - Clean version without duplicates -->
+<nav class="navbar navbar-expand-lg main-nav">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;">
+            <span class="text-white">Anvi Studio</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+
+            <!-- 1. MAIN LINKS -->
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
+                    <ul class="dropdown-menu" aria-labelledby="shopDropdown">
+                        <li><a class="dropdown-item" href="/products?category=Sarees">Sarees</a></li>
+                        <li><a class="dropdown-item" href="/products?category=Lehengas">Lehengas</a></li>
+                        <li><a class="dropdown-item" href="/products?category=Kurtis">Kurtis & Suits</a></li>
+                        <li><a class="dropdown-item" href="/products">All Products</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+            </ul>
+
+            <!-- 2. ICON GROUP (Right side) -->
+            <ul class="navbar-nav mb-2 mb-lg-0">
+
+                <!-- LOGIN ICON - Only when NOT authenticated -->
+                <li class="nav-item" sec:authorize="!isAuthenticated()">
+                    <a class="nav-link" th:href="@{/login}" title="Login">
+                        <i class="fa fa-user"></i>
+                    </a>
+                </li>
+
+                <!-- USER NAME - Only when authenticated -->
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <span class="nav-link text-white">
+                        <i class="fa fa-user me-1"></i>
+                        <span sec:authentication="name">User</span>
+                    </span>
+                </li>
+
+                <!-- WISHLIST ICON -->
+                <li class="nav-item">
+                    <!-- Unauthenticated users -->
+                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()" title="Wishlist">
+                        <i class="fa-regular fa-heart"></i>
+                    </a>
+                    <!-- Authenticated users -->
+                    <a class="nav-link" th:href="@{/wishlist}" sec:authorize="isAuthenticated()" title="My Wishlist">
+                        <i class="fa-regular fa-heart"></i>
+                    </a>
+                </li>
+
+                <!-- CART ICON -->
+                <li class="nav-item">
+                    <!-- Unauthenticated users -->
+                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()" title="Cart">
+                        <i class="fa fa-shopping-cart"></i>
+                    </a>
+                    <!-- Authenticated users -->
+                    <a class="nav-link" th:href="@{/cart}" sec:authorize="isAuthenticated()" title="My Cart">
+                        <i class="fa fa-shopping-cart"></i>
+                    </a>
+                </li>
+
+                <!-- LOGOUT BUTTON - Only when authenticated -->
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <form th:action="@{/logout}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="fa fa-sign-out-alt me-1"></i> Logout
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<!--&lt;!&ndash; NAVBAR (Thymeleaf will replace if fragment exists) &ndash;&gt;
+<nav class="navbar navbar-expand-lg main-nav">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;">
+            <span class="text-white">Anvi Studio</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+
+            &lt;!&ndash; 1. MAIN LINKS (Pushed left) &ndash;&gt;
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
+                    <ul class="dropdown-menu" aria-labelledby="shopDropdown">
+                        <li><a class="dropdown-item" href="/products?category=Sarees">Sarees</a></li>
+                        <li><a class="dropdown-item" href="/products?category=Lehengas">Lehengas</a></li>
+                        <li><a class="dropdown-item" href="/products?category=Kurtis">Kurtis & Suits</a></li>
+                        <li><a class="dropdown-item" href="/products">All Products</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+            </ul>
+
+            &lt;!&ndash; 2. ICON GROUP (Pushed to the far right using ms-auto) &ndash;&gt;
+            <ul class="navbar-nav  mb-2 mb-lg-0">
+
+                &lt;!&ndash; LOGIN/PROFILE ICON &ndash;&gt;
+                <li class="nav-item">
+                    &lt;!&ndash; If logged out: Login &ndash;&gt;
+                    <a class="nav-link" th:href="@{/login}" sec:authorize="!isAuthenticated()">
+                        <i class="fa fa-user me-1"></i>
+                    </a>
+                </li>
+
+                &lt;!&ndash; WISHLIST ICON &ndash;&gt;
+                <li class="nav-item">
+                    &lt;!&ndash; If logged out: /wishlist-unauth (New requirement fulfilled here) &ndash;&gt;
+                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()">
+                        <i class="fa-regular fa-heart"></i>
+                    </a>
+                </li>
+
+                &lt;!&ndash; CART ICON &ndash;&gt;
+                <li class="nav-item">
+                    &lt;!&ndash; If logged out: /cart-unauth (New requirement fulfilled here) &ndash;&gt;
+                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()">
+                        <i class="fa fa-shopping-cart"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>-->
+
+<!-- HERO SLIDER -->
+<section class="hero-banner" aria-label="Hero">
+    <div class="slides">
+
+        <div class="slide active" data-index="0">
+            <img src="images/licensed-image.png" alt="Long Frocks">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Long Frocks</h1>
+                <p class="lead">Breezy long frocks crafted with premium fabrics — perfect for every occasion.</p>
+                <a class="btn btn-cta" href="/products?category=LongFrocks">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="1">
+            <img src="images/licensed-image1.jpg" alt="Ready To Wear">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Ready To Wear</h1>
+                <p class="lead">Classic ready-to-wear pieces updated with modern cuts.</p>
+                <a class="btn btn-cta" href="/products?category=ReadyToWear">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="2">
+            <img src="images/licensed-image2.jpg" alt="Kidswear">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Kidswear</h1>
+                <p class="lead">Comfortable, colorful and adorable styles for the little ones.</p>
+                <a class="btn btn-cta" href="/products?category=Kidswear">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="3">
+            <img src="images/licensed-image3.png" alt="Lehengas">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Lehengas</h1>
+                <p class="lead">Handpicked lehengas for weddings and festive celebrations.</p>
+                <a class="btn btn-cta" href="/products?category=Lehengas">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="4">
+            <img src="images/licensed-image4.jpg" alt="Handlooms">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Handlooms</h1>
+                <p class="lead">Authentic handloom pieces woven by skilled artisans.</p>
+                <a class="btn btn-cta" href="/products?category=Handlooms">SHOP NOW</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- arrows -->
+    <button class="hero-arrow left" aria-label="Previous slide">&#10094;</button>
+    <button class="hero-arrow right" aria-label="Next slide">&#10095;</button>
+
+    <!-- dots -->
+    <div class="slider-dots" role="tablist"></div>
+</section>
+
+<!-- CATEGORIES (shop by category) -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Shop By Category</h2>
+        <div class="row g-4">
+            <div class="col-sm-6 col-md-4">
+                <a href="/products?category=Sarees" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="https://placehold.co/800x600/8B4513/ffffff?text=SAREES" class="img-fluid w-100" alt="Sarees">
+                        <div class="py-3 text-center bg-white">
+                            <h5 class="mb-0">SAREES</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <a href="/products?category=Lehengas" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="https://placehold.co/800x600/DAA520/ffffff?text=LEHENGAS" class="img-fluid w-100" alt="Lehengas">
+                        <div class="py-3 text-center bg-white"><h5 class="mb-0">LEHENGAS</h5></div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <a href="/products?category=Kurtis" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="https://placehold.co/800x600/800080/ffffff?text=KURTIS" class="img-fluid w-100" alt="Kurtis">
+                        <div class="py-3 text-center bg-white"><h5 class="mb-0">KURTIS & SUITS</h5></div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- NEW ARRIVALS (grid) -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">New Arrivals</h3>
+            <a href="/products" class="text-decoration-none">View All</a>
+        </div>
+        <div class="row g-4">
+            <!-- example products -->
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card product-card">
+                    <img src="images/licensed-image.jpg" class="card-img-top" alt="product">
+                    <div class="card-body">
+                        <h6 class="card-title">Elegant Long Frock</h6>
+                        <p class="mb-2 text-muted">₹2,199</p>
+                        <a href="/products/1" class="btn btn-outline-dark btn-sm">View</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card product-card">
+                    <img src="images/licensed-image1.jpg" class="card-img-top" alt="product">
+                    <div class="card-body">
+                        <h6 class="card-title">Silk Saree</h6>
+                        <p class="mb-2 text-muted">₹3,499</p>
+                        <a href="/products/2" class="btn btn-outline-dark btn-sm">View</a>
+                    </div>
+                </div>
+            </div>
+            <!-- add more product cards as needed -->
+        </div>
+    </div>
+</section>
+
+<!-- BEST SELLERS (tabs) -->
+<section class="py-5">
+    <div class="container">
+        <h3 class="mb-4">Best Selling</h3>
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation"><button class="nav-link active" id="pills-toprated-tab" data-bs-toggle="pill" data-bs-target="#toprated" type="button">Top Rated</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="pills-selling-tab" data-bs-toggle="pill" data-bs-target="#selling" type="button">Best Selling</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="pills-recent-tab" data-bs-toggle="pill" data-bs-target="#recent" type="button">Recent</button></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="toprated">
+                <div class="row g-4">
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card product-card"><img src="https://placehold.co/600x600/efe3ff/333?text=Top+1" class="card-img-top"><div class="card-body"><h6>Top Rated 1</h6><p class="text-muted">₹2,999</p></div></div>
+                    </div>
+                    <!-- ... -->
+                </div>
+            </div>
+            <div class="tab-pane fade" id="selling">
+                <div class="row g-4">
+                    <div class="col-md-4 col-lg-3"><div class="card product-card"><img src="https://placehold.co/600x600/f7f1e0/333?text=Sell+1" class="card-img-top"><div class="card-body"><h6>Best Seller 1</h6><p class="text-muted">₹1,799</p></div></div></div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="recent">
+                <div class="row g-4"><div class="col-md-4 col-lg-3"><div class="card product-card"><img src="images/licensed-imagekid.jpg" class="card-img-top"><div class="card-body"><h6>Recent 1</h6><p class="text-muted">₹999</p></div></div></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FLOATING WHATSAPP -->
+<a class="whatsapp-float" href="https://wa.me/919490334557" target="_blank" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>
+
+<!-- FOOTER -->
+<footer class="py-5" style="background-color:var(--dark); color:#fff;">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-3"><h5>Anvi Studio</h5><p class="small">Handpicked ethnic wear for every occasion.</p></div>
+            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a href="/products?category=Sarees" class="text-white">Sarees</a></li><li><a href="/products?category=Lehengas" class="text-white">Lehengas</a></li></ul></div>
+            <div class="col-md-3 mb-3"><h6>Contact</h6><p class="small">Vijayawada, India<br><a href="mailto:avnistudio@gmail.com" class="text-white">avnistudio@gmail.com</a></p></div>
+            <div class="col-md-3 mb-3"><h6>Follow</h6><!--<p><a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a><a href="#" class="text-white"><i class="fab fa-facebook"></i></a></p>-->
+                <div class="d-flex my-3 fs-5">
+                <a href="https://www.facebook.com/bharatheswar.kodali/"
+                   class="text-white me-3">
+                    <i class="fab fa-facebook-f"></i>
+                </a>
+                <a href="https://www.instagram.com/avnistudio"
+                   class="text-white me-3">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://wa.me/919490334557"
+                   class="text-white">
+                    <i class="fab fa-whatsapp"></i>
+                </a>
+             </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // FIX: Wrap initialization in DOMContentLoaded to ensure elements exist before listeners are attached.
+    document.addEventListener('DOMContentLoaded', function() {
+        (function(){
+            const slides = document.querySelectorAll('.slide');
+            const left = document.querySelector('.hero-arrow.left');
+            const right = document.querySelector('.hero-arrow.right');
+            const dotsWrap = document.querySelector('.slider-dots');
+            let idx = 0, timer;
+
+            // Check if essential elements were found before proceeding
+            if (!slides.length || !left || !right || !dotsWrap) {
+                console.warn('Hero slider elements not found, skipping JS initialization.');
+                return;
+            }
+
+            function createDots(){
+                slides.forEach((s,i)=>{
+                    const btn = document.createElement('button');
+                    btn.setAttribute('aria-label','Go to slide '+(i+1));
+                    btn.addEventListener('click',()=>{ goTo(i); });
+                    dotsWrap.appendChild(btn);
+                });
+                dotsWrap.children[0].classList.add('active');
+            }
+
+            function setActive(){
+                slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+                Array.from(dotsWrap.children).forEach((d,i)=> d.classList.toggle('active', i===idx));
+            }
+
+            function goTo(i){ idx = i; setActive(); resetTimer(); }
+            function next(){ idx = (idx+1)%slides.length; setActive(); }
+            function prev(){ idx = (idx-1+slides.length)%slides.length; setActive(); }
+
+            left.addEventListener('click', ()=>{ prev(); resetTimer(); });
+            right.addEventListener('click', ()=>{ next(); resetTimer(); });
+
+            // swipe support
+            let startX=0, endX=0;
+            const threshold = 50;
+            const slidesArea = document.querySelector('.slides');
+            slidesArea.addEventListener('touchstart', e=>{ startX = e.touches[0].clientX; });
+            slidesArea.addEventListener('touchmove', e=>{ endX = e.touches[0].clientX; });
+            slidesArea.addEventListener('touchend', ()=>{
+                if(!endX) return;
+                const diff = startX - endX;
+                if(Math.abs(diff) > threshold){ if(diff>0) next(); else prev(); }
+                startX=0; endX=0; resetTimer();
+            });
+
+            function resetTimer(){ clearInterval(timer); timer = setInterval(next,5000); }
+
+            // init
+            createDots(); setActive(); resetTimer();
+        })();
+    });
+</script>
+</body>
+</html>

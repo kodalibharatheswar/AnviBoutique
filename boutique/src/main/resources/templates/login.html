@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Boutique Login</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand ms-3" href="/">Boutique</a>
+</nav>
+
+<div class="container mt-5 col-md-4">
+
+    <div class="card p-4 shadow">
+        <h3 class="text-center">Login</h3>
+
+        <form th:action="@{/login}" method="post">
+
+            <div class="mb-3">
+                <label>Username (Email or Admin)</label>
+                <!-- CHANGED TYPE from 'email' to 'text' to allow 'admin' -->
+                <input type="text" name="username" class="form-control" required/>
+            </div>
+
+            <div class="mb-3">
+                <label>Password</label>
+                <input type="password" name="password" class="form-control" required/>
+            </div>
+
+            <button class="btn btn-primary w-100">Login</button>
+
+            <p th:if="${param.error}" class="text-danger mt-3">
+                Invalid username or password
+            </p>
+
+            <p th:if="${param.logout}" class="text-success mt-3">
+                Logged out successfully
+            </p>
+
+        </form>
+
+        <!-- Corrected link from previous step -->
+        <a th:href="@{/register}" class="mt-3 d-block text-center">New Customer? Register</a>
+
+    </div>
+
+</div>
+
+</body>
+</html>

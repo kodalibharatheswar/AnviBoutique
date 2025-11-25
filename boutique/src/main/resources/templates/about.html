@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="utf-8" />
+    <title>About Anvi Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- CRITICAL: Ensure all Bootstrap and FontAwesome links are present -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+
+    <style>
+        :root{
+            --brand:#ff7c04;
+            --dark:#222;
+            --muted:#6c757d;
+        }
+        body { font-family: 'Roboto', sans-serif; color: #222; }
+        .main-nav{ background:#000; color:#fff; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover{ color:var(--brand); }
+        .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #000; }
+        .section-bg { background-color: #f7f7f7; }
+        .story-image {
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            height: 450px;
+            object-fit: cover;
+        }
+        .value-icon {
+            font-size: 2.5rem;
+            color: var(--brand);
+            margin-bottom: 15px;
+        }
+        /* FIX FOR ICON ALIGNMENT */
+        .navbar-nav { align-items: center; }
+    </style>
+</head>
+<body>
+
+<!-- Offer bar -->
+<div class="offer-bar text-center" style="background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0;">
+    <div class="container">Free Shipping on Orders Above ₹1999 – Use code <a href="#" style="color:var(--brand); text-decoration:none; font-weight:600;">FREESHIP</a></div>
+</div>
+
+<!-- NAVBAR - FIXED VERSION -->
+<nav class="navbar navbar-expand-lg main-nav">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;">
+            <span class="text-white">Anvi Studio</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <!-- MAIN LINKS -->
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
+                    <ul class="dropdown-menu" aria-labelledby="shopDropdown">
+                        <li><a class="dropdown-item" href="/products?category=Sarees">Sarees</a></li>
+                        <li><a class="dropdown-item" href="/products?category=Lehengas">Lehengas</a></li>
+                        <li><a class="dropdown-item" href="/products?category=Kurtis">Kurtis & Suits</a></li>
+                        <li><a class="dropdown-item" href="/products">All Products</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="/about">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+            </ul>
+
+            <!-- NAVIGATION ICONS (Pushed to the far right) - SINGLE SET ONLY -->
+            <ul class="navbar-nav  mb-2 mb-lg-0">
+
+                <!-- 1. LOGIN/WELCOME ICON -->
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/login}" sec:authorize="!isAuthenticated()">
+                        <i class="fa fa-user"></i>
+                    </a>
+                </li>
+
+                <!-- 2. WISHLIST ICON -->
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()">
+                        <i class="fa-regular fa-heart"></i>
+                    </a>
+                </li>
+
+                <!-- 3. CART ICON -->
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()">
+                        <i class="fa fa-shopping-cart"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ABOUT HERO SECTION -->
+<section class="py-5 text-center" style="background-color: #f0f0f0;">
+    <div class="container">
+        <h1 class="hero-title display-4 mb-2">Our Story</h1>
+        <p class="lead text-muted">Celebrating Heritage, Crafting Elegance.</p>
+    </div>
+</section>
+
+<!-- BRAND STORY SECTION -->
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <!-- Placeholder image for visual appeal and brand context -->
+                <img src="https://placehold.co/800x600/f8e4c7/444?text=Our+Artisans" alt="Artisan working on fabric" class="img-fluid story-image w-100">
+            </div>
+            <div class="col-lg-6">
+                <h3 class="hero-title mb-4">The Anvi Studio Difference</h3>
+                <p>Anvi Studio was founded in the heart of Vijayawada with a simple yet profound mission: to blend India's rich textile heritage with contemporary design sensibilities. We believe that ethnic wear should be both timeless and effortless.</p>
+                <p>From the sourcing of premium silks and cottons to the final hand-finished detail, every garment is a testament to quality and meticulous craftsmanship. We work closely with skilled artisans across India, ensuring fair wages and preserving age-old techniques that are at risk of fading away.</p>
+                <p class="fw-bold mt-4">"Elegance is not about being noticed, it's about being remembered." - Anvi Studio Motto</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MISSION AND VALUES SECTION -->
+<section class="py-5 section-bg">
+    <div class="container">
+        <h3 class="hero-title text-center mb-5">Our Core Values</h3>
+        <div class="row text-center g-4">
+
+            <div class="col-md-4">
+                <div class="p-4 bg-white rounded shadow-sm h-100">
+                    <i class="fas fa-hand-holding-usd value-icon"></i>
+                    <h5>Ethical Sourcing</h5>
+                    <p class="text-muted small">We commit to fair trade practices, guaranteeing that every artisan involved in crafting our clothes is justly compensated.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="p-4 bg-white rounded shadow-sm h-100">
+                    <i class="fas fa-gem value-icon"></i>
+                    <h5>Uncompromising Quality</h5>
+                    <p class="text-muted small">Only premium, handpicked fabrics and enduring designs make it into our collections, ensuring longevity and luxury.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="p-4 bg-white rounded shadow-sm h-100">
+                    <i class="fas fa-leaf value-icon"></i>
+                    <h5>Sustainable Fashion</h5>
+                    <p class="text-muted small">We strive to minimize waste and use eco-friendly materials wherever possible in our production cycle.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- TEAM CALLOUT (Optional) -->
+<section class="py-5 text-center">
+    <div class="container">
+        <div class="col-lg-8 mx-auto">
+            <h3 class="hero-title mb-3">Meet the Founder</h3>
+            <p class="lead text-muted">Founded by Pratyusha & Vijaya, Anvi Studio started as a passion project to bring accessible, high-quality traditional attire to the modern woman.</p>
+            <a href="/contact" class="btn btn-dark mt-3">Get In Touch</a>
+        </div>
+    </div>
+</section>
+
+
+<!-- FOOTER (Standardized structure) -->
+<footer class="py-5" style="background-color:var(--dark); color:#fff;">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-3"><h5>Anvi Studio</h5><p class="small">Handpicked ethnic wear for every occasion.</p></div>
+            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a href="/products?category=Sarees" class="text-white">Sarees</a></li><li><a href="/products?category=Lehengas" class="text-white">Lehengas</a></li></ul></div>
+            <div class="col-md-3 mb-3"><h6>Contact</h6><p class="small">Vijayawada, India<br><a href="mailto:avnistudio@gmail.com" class="text-white">avnistudio@gmail.com</a></p></div>
+            <div class="col-md-3 mb-3"><h6>Follow</h6><p><a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a><a href="#" class="text-white"><i class="fab fa-facebook"></i></a></p></div>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

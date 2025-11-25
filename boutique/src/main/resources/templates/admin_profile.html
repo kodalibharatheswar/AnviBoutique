@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Admin Profile - Boutique</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root{ --brand:#ff7c04; --dark:#222; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; }
+        .navbar { background-color: var(--dark) !important; }
+        .btn-brand { background-color: var(--brand); border-color: var(--brand); color: white; }
+        .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
+        .profile-card { border-radius: 12px; }
+    </style>
+</head>
+<body>
+
+<!-- ADMIN NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand ms-3" href="/admin/dashboard">Boutique Admin</a>
+        <div class="d-flex align-items-center">
+            <a th:href="@{/admin/profile}" class="btn btn-sm btn-outline-light me-3">
+                <i class="fa fa-user-cog me-1"></i> Profile
+            </a>
+            <!-- Display current username -->
+            <span class="text-white me-3 small" sec:authentication="name">Admin</span>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-danger btn-sm me-3">Logout</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-dark">Admin Profile Management</h2>
+
+    <!-- Success Message from RedirectAttributes (after successful change) -->
+    <div th:if="${message}" class="alert alert-success" role="alert" th:text="${message}"></div>
+    <!-- Error Message from RedirectAttributes (e.g., username taken) -->
+    <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+
+    <div class="card profile-card shadow p-4 mb-5">
+        <h4 class="card-title mb-4">Update Login Credentials</h4>
+
+        <!-- Form submits to AdminController.updateProfile -->
+        <form th:action="@{/admin/updateProfile}" method="post">
+            <div class="mb-3">
+                <label for="currentUsername" class="form-label">Current Username / Email</label>
+                <!-- Display the current username (non-editable field) -->
+                <input type="text" id="currentUsername" class="form-control" th:value="${currentUsername}" disabled>
+                <!-- Hidden field to pass the current username for lookup in the controller -->
+                <input type="hidden" name="currentUsername" th:value="${currentUsername}">
+            </div>
+
+            <div class="mb-3">
+                <label for="newUsername" class="form-label">New Username / Email</label>
+                <input type="text" name="newUsername" id="newUsername" class="form-control" required
+                       th:placeholder="'Current: ' + ${currentUsername}">
+                <div class="form-text">This will be your new login ID.</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="newPassword" class="form-label">New Password</label>
+                <input type="password" name="newPassword" id="newPassword" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                <input type="password" id="confirmPassword" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn btn-brand w-100 mt-3" onclick="return validatePassword()">
+                <i class="fa fa-save me-2"></i> Save Changes
+            </button>
+        </form>
+    </div>
+
+    <a th:href="@{/admin/dashboard}" class="btn btn-secondary"><i class="fa fa-arrow-left me-2"></i> Back to Dashboard</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Client-side password matching validation
+    function validatePassword() {
+        const newPass = document.getElementById('newPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
+
+        if (newPass !== confirmPass) {
+            alert("Error: The new password and confirmation password do not match.");
+            return false;
+        }
+        if (newPass.length < 6) {
+            alert("Error: Password must be at least 6 characters long.");
+            return false;
+        }
+        return true;
+    }
+</script>
+</body>
+</html>
