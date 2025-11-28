@@ -2,7 +2,8 @@ package com.anvistudio.boutique.controller;
 
 import com.anvistudio.boutique.model.Product;
 import com.anvistudio.boutique.service.ProductService;
-import com.anvistudio.boutique.service.UserService; // Import the UserService
+import com.anvistudio.boutique.service.UserService;
+import com.anvistudio.boutique.service.ContactService; // NEW
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,10 +11,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable; // NEW
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam; // Required for form parameters
-import org.springframework.web.servlet.mvc.support.RedirectAttributes; // Required for flash messages
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.Optional; // NEW
 
 /**
  * Controller for admin-specific functionality, requiring ROLE_ADMIN access.
@@ -24,43 +28,126 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes; // Requir
 public class AdminController {
 
     private final ProductService productService;
-    private final UserService userService; // NEW: Dependency for profile update
+    private final UserService userService;
+    private final ContactService contactService; // NEW
 
-    // Constructor updated to inject UserService
-    public AdminController(ProductService productService, UserService userService) {
+    public AdminController(ProductService productService, UserService userService, ContactService contactService) {
         this.productService = productService;
         this.userService = userService;
+        this.contactService = contactService; // In
     }
 
-    // --- Dashboard & Product Management ---
+    // --- Product Management Helper Method for Categories ---
+    private String[] getAllCategories() {
+        // List of ALL categories for the dropdown filter (Manual list for now)
+        return new String[]{
+                "Sarees", "Lehengas", "Kurtis", "Long Frocks", "Mom & Me", "Crop Top – Skirts",
+                "Handlooms", "Casual Frocks", "Ready To Wear", "Dupattas", "Kids wear",
+                "Dress Material", "Blouses", "Fabrics"
+        };
+    }
+
+    // --- Dashboard & Product Listing (Filterable) ---
     @GetMapping("/dashboard")
-    public String adminDashboard(Model model) {
-        model.addAttribute("products", productService.getAllProducts());
+    public String adminDashboard(
+            @RequestParam(value = "category", required = false) String category,
+            Model model) {
+
+        model.addAttribute("products", productService.getProductsByCategoryOrAll(category));
         model.addAttribute("newProduct", new Product());
-        return "admin_dashboard";
+        model.addAttribute("currentCategory", category);
+        model.addAttribute("allCategories", getAllCategories()); // Pass categories for filtering/adding
+
+        return "admin_dashboard"; // This must be the correct template for the admin UI
     }
 
     @PostMapping("/addProduct")
-    public String addProduct(@ModelAttribute Product newProduct) {
-        productService.saveProduct(newProduct);
-        return "redirect:/admin/dashboard?success";
+    public String addProduct(@ModelAttribute Product newProduct, RedirectAttributes redirectAttributes) {
+        try {
+            productService.saveProduct(newProduct);
+            redirectAttributes.addFlashAttribute("successMessage", "Product added successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error adding product: " + e.getMessage());
+        }
+        return "redirect:/admin/dashboard";
     }
 
-    // --- New Functionality: Admin Profile Update ---
+
+    // --- NEW: Product Delete Functionality ---
+    @PostMapping("/product/delete/{id}")
+    public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            productService.deleteProduct(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Product ID " + id + " deleted successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error deleting product: " + e.getMessage());
+        }
+        return "redirect:/admin/dashboard";
+    }
+
+
+    // --- NEW: Edit Product Functionality ---
 
     /**
-     * Displays the Admin profile page with the form to change credentials.
+     * Displays the form to edit an existing product.
      */
+    @GetMapping("/product/edit/{id}")
+    public String showEditProductForm(@PathVariable Long id, Model model) {
+        Optional<Product> productOptional = productService.getProductById(id);
+
+        if (productOptional.isEmpty()) {
+            // If product is not found, redirect back to dashboard
+            return "redirect:/admin/dashboard";
+        }
+
+        model.addAttribute("product", productOptional.get());
+        model.addAttribute("allCategories", getAllCategories()); // Pass categories for selection
+
+        return "admin_edit_product"; // NEW TEMPLATE
+    }
+
+
+    // --- NEW: Contact Message Management ---
+
+    @GetMapping("/contacts")
+    public String viewContactMessages(Model model) {
+        model.addAttribute("messages", contactService.getAllMessages());
+        return "admin_contact_messages"; // NEW TEMPLATE
+    }
+
+    @PostMapping("/contact/delete/{id}")
+    public String deleteContactMessage(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            contactService.deleteMessage(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Message ID " + id + " deleted.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error deleting message: " + e.getMessage());
+        }
+        return "redirect:/admin/contacts";
+    }
+
+    /**
+     * Handles the update of an existing product.
+     */
+    @PostMapping("/product/update")
+    public String updateProduct(@ModelAttribute("product") Product updatedProduct, RedirectAttributes redirectAttributes) {
+        try {
+            productService.saveProduct(updatedProduct); // save() works for both insert and update
+            redirectAttributes.addFlashAttribute("successMessage", "Product updated successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error updating product: " + e.getMessage());
+        }
+        // Redirect back to the dashboard, potentially maintaining the current filter
+        return "redirect:/admin/dashboard";
+    }
+
+    // --- Admin Profile Update methods (unchanged) ---
     @GetMapping("/profile")
     public String showAdminProfile(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        // Pass the current username to the template
         model.addAttribute("currentUsername", userDetails.getUsername());
-        return "admin_profile"; // Maps to src/main/resources/templates/admin_profile.html
+        return "admin_profile";
     }
 
-    /**
-     * Handles the POST request to change the admin's username and password.
-     */
     @PostMapping("/updateProfile")
     public String updateAdminProfile(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -68,24 +155,16 @@ public class AdminController {
             @RequestParam("newPassword") String newPassword,
             RedirectAttributes redirectAttributes) {
 
-        // Get the current username (the one used for authentication)
         String currentUsername = userDetails.getUsername();
 
         try {
-            // Call the service method to update/persist credentials
             userService.updateAdminCredentials(currentUsername, newUsername, newPassword);
-
-            // Set a message to display on the login page
             redirectAttributes.addFlashAttribute("message", "Credentials updated successfully. Please log in with your new details.");
-
-            // CRITICAL: Redirect to login page after credential change
             return "redirect:/login?updated";
         } catch (IllegalStateException e) {
-            // Handle case where the new username is already taken
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/admin/profile";
         } catch (Exception e) {
-            // Handle other unexpected errors
             redirectAttributes.addFlashAttribute("error", "Error updating credentials: An unexpected error occurred.");
             return "redirect:/admin/profile";
         }

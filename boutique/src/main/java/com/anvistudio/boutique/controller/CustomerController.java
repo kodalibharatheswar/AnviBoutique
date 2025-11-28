@@ -42,6 +42,8 @@ public class CustomerController {
     @GetMapping("/dashboard")
     public String customerDashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
 
+        return "redirect:/";
+        /*
         Optional<Customer> customerOptional = userService.getCustomerDetailsByUsername(userDetails.getUsername());
 
         if (customerOptional.isPresent()) {
@@ -54,5 +56,6 @@ public class CustomerController {
         model.addAttribute("products", productService.getDisplayableProducts());
 
         return "customer_dashboard"; // Maps to src/main/resources/templates/customer_dashboard.html
+         */
     }
 }

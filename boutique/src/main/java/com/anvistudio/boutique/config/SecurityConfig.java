@@ -43,20 +43,34 @@ public class SecurityConfig {
 
                 // Define authorization rules
                 .authorizeHttpRequests(authorize -> authorize
-                        // Admin and Customer Dashboards (Role-based access)
+                        // Admin Dashboard (Role-based access)
+                        // Includes new edit endpoint for admin: /admin/product/edit/{id}
                         .requestMatchers("/admin/profile", "/admin/updateProfile").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/customer/**").hasRole("CUSTOMER")
 
                         // Protected E-commerce Features (Require Authentication)
                         .requestMatchers("/wishlist", "/wishlist/**").authenticated()
-                        .requestMatchers("/cart", "/cart/**").authenticated() // FIX: Cart now requires login
+                        .requestMatchers("/cart", "/cart/**").authenticated()
 
-                        // CRITICAL FIX: Allow public access to unauth pages
-                        .requestMatchers("/wishlist-unauth", "/cart-unauth").permitAll()
+                        // Public Access (Browsing must be permitted)
+                        .requestMatchers(
+                                "/",
+                                "/login",
+                                "/register",
+                                "/register/success",
+                                "/about",
+                                "/contact",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/products",            // Main catalog page
+                                "/products/**",         // Catalog/Detail pages
+                                "/wishlist-unauth",
+                                "/cart-unauth"
+                        ).permitAll()
 
-                        // Public access (available to everyone)
-                        .requestMatchers("/", "/login", "/register", "/register/success", "/about", "/contact", "/css/**", "/js/**", "/images/**").permitAll()
+                        // All other requests must be authenticated
                         .anyRequest().authenticated()
                 )
                 // Configure form-based login
@@ -64,12 +78,14 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .permitAll()
                         .successHandler((request, response, authentication) -> {
-                            // Role-based redirection logic
+                            // --- CRITICAL REDIRECTION LOGIC ---
                             if (authentication.getAuthorities().stream()
                                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                                // Admin is correctly directed to their dedicated dashboard
                                 response.sendRedirect("/admin/dashboard");
                             } else {
-                                response.sendRedirect("/customer/dashboard");
+                                // Customer is directed to the main home page (which acts as their dashboard)
+                                response.sendRedirect("/");
                             }
                         })
                 )
@@ -82,3 +98,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+

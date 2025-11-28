@@ -21,8 +21,18 @@
         }
         body { font-family: 'Roboto', sans-serif; color: #222; }
         .main-nav{ background:#000; color:#fff; }
+
+        /* *** FIX: Ensure active links are always clearly visible *** */
         .main-nav .nav-link{ color:#fff; }
-        .main-nav .nav-link:hover{ color:var(--brand); }
+        .main-nav .nav-link:hover,
+        .main-nav .nav-link.active {
+            color: var(--brand); /* Active/Hover color */
+            font-weight: 700;    /* Make active link bold */
+            border-bottom: 2px solid var(--brand); /* Subtle underline for clarity */
+            padding-bottom: 4px;
+        }
+        /* *** END FIX *** */
+
         .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #000; }
         .section-bg { background-color: #f7f7f7; }
         .story-image {
@@ -62,15 +72,31 @@
             <!-- MAIN LINKS -->
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <!-- *** NEW ARRIVALS TAB *** -->
+                <li class="nav-item"><a class="nav-link" th:href="@{/products(sort='newest')}">New Arrivals</a></li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
                     <ul class="dropdown-menu" aria-labelledby="shopDropdown">
-                        <li><a class="dropdown-item" href="/products?category=Sarees">Sarees</a></li>
-                        <li><a class="dropdown-item" href="/products?category=Lehengas">Lehengas</a></li>
-                        <li><a class="dropdown-item" href="/products?category=Kurtis">Kurtis & Suits</a></li>
-                        <li><a class="dropdown-item" href="/products">All Products</a></li>
+                        <!-- START: EXPANDED CATEGORY LIST -->
+                        <li><a class="dropdown-item" th:href="@{/products(category='Long Frocks')}">Long Frocks</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Lehengas')}">Lehengas</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Mom & Me')}">Mom & Me</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Crop Top – Skirts')}">Crop Top – Skirts</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Handlooms')}">Handlooms</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Casual Frocks')}">Casual Frocks</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Ready To Wear')}">Ready To Wear</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Dupattas')}">Dupattas</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Kids wear')}">Kids wear</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Dress Material')}">Dress Material</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Sarees')}">Sarees</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Blouses')}">Blouses</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Fabrics')}">Fabrics</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <!-- END: EXPANDED CATEGORY LIST -->
+                        <li><a class="dropdown-item" th:href="@{/products}">All Products</a></li>
                     </ul>
                 </li>
+                <!-- ABOUT - ACTIVE ON ABOUT.HTML -->
                 <li class="nav-item"><a class="nav-link active" aria-current="page" href="/about">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
             </ul>
@@ -85,18 +111,28 @@
                     </a>
                 </li>
 
+                <!-- USER NAME - Only when authenticated -->
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <span class="nav-link text-white"><i class="fa fa-user me-1"></i><span sec:authentication="name">User</span></span>
+                </li>
+
                 <!-- 2. WISHLIST ICON -->
                 <li class="nav-item">
-                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()">
-                        <i class="fa-regular fa-heart"></i>
-                    </a>
+                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()"><i class="fa-regular fa-heart"></i></a>
+                    <a class="nav-link" th:href="@{/wishlist}" sec:authorize="isAuthenticated()"><i class="fa-regular fa-heart"></i></a>
                 </li>
 
                 <!-- 3. CART ICON -->
                 <li class="nav-item">
-                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()">
-                        <i class="fa fa-shopping-cart"></i>
-                    </a>
+                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()"><i class="fa fa-shopping-cart"></i></a>
+                    <a class="nav-link" th:href="@{/cart}" sec:authorize="isAuthenticated()"><i class="fa fa-shopping-cart"></i></a>
+                </li>
+
+                <!-- LOGOUT BUTTON - Only when authenticated -->
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <form th:action="@{/logout}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                    </form>
                 </li>
             </ul>
         </div>
@@ -180,7 +216,7 @@
     <div class="container">
         <div class="row">
             <div class="col-md-4 mb-3"><h5>Anvi Studio</h5><p class="small">Handpicked ethnic wear for every occasion.</p></div>
-            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a href="/products?category=Sarees" class="text-white">Sarees</a></li><li><a href="/products?category=Lehengas" class="text-white">Lehengas</a></li></ul></div>
+            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a th:href="@{/products(category='Sarees')}" class="text-white">Sarees</a></li><li><a th:href="@{/products(category='Lehengas')}" class="text-white">Lehengas</a></li></ul></div>
             <div class="col-md-3 mb-3"><h6>Contact</h6><p class="small">Vijayawada, India<br><a href="mailto:avnistudio@gmail.com" class="text-white">avnistudio@gmail.com</a></p></div>
             <div class="col-md-3 mb-3"><h6>Follow</h6><p><a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a><a href="#" class="text-white"><i class="fab fa-facebook"></i></a></p></div>
         </div>

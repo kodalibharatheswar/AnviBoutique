@@ -1,6 +1,5 @@
 <!-- Full-featured index.html modeled after Anvi Studio - hero slider, categories, new arrivals, best sellers, floating WhatsApp, sticky offer bar, responsive, dots, fade, swipe -->
 <!DOCTYPE html>
-<!-- CRITICAL: Ensure xmlns:sec is here to use security tags -->
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="utf-8" />
@@ -29,8 +28,16 @@
 
         /* NAVBAR */
         .main-nav{ background:#000; color:#fff; }
+        /* *** FIX: Ensure active links are always clearly visible *** */
         .main-nav .nav-link{ color:#fff; }
-        .main-nav .nav-link:hover{ color:var(--brand); }
+        .main-nav .nav-link:hover,
+        .main-nav .nav-link.active {
+            color: var(--brand); /* Active/Hover color */
+            font-weight: 700;    /* Make active link bold */
+            border-bottom: 2px solid var(--brand); /* Subtle underline for clarity */
+            padding-bottom: 4px;
+        }
+        /* *** END FIX *** */
 
         /* HERO: fade slider + dots */
         .hero-banner { position:relative; width:100%; overflow:hidden; }
@@ -54,20 +61,61 @@
         .slider-dots button{ width:12px; height:12px; border-radius:50%; border:none; background:rgba(255,255,255,0.6); cursor:pointer; }
         .slider-dots button.active{ background:var(--brand); }
 
-        /* Category cards */
-        .category-card{ border-radius:12px; overflow:hidden; transition:transform .3s, box-shadow .3s; }
-        .category-card:hover{ transform:translateY(-6px); box-shadow:0 18px 40px rgba(0,0,0,0.12); }
+        /* --- NEW CATEGORY CARD STYLES (Expanded) --- */
+        .category-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 30px;
+            height: 150px; /* Uniform height for visual balance */
+            border-radius: 12px;
+            transition: transform .3s, box-shadow .3s;
+            color: #fff; /* White text over colored backgrounds */
+            font-family: 'Playfair Display', serif;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none !important; /* Ensure text remains white and undecorated */
+        }
+        .category-card:hover {
+            transform: scale(1.02); /* Slight lift on hover */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            color: #fff;
+        }
+        .category-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            z-index: 2;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .category-image {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%) scale(1.1);
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6; /* Slight transparency to make text legible */
+            transition: transform 0.3s;
+        }
+        .category-card:hover .category-image {
+            transform: translateY(-50%) scale(1.15);
+        }
+        /* --- END NEW CATEGORY CARD STYLES --- */
 
-        /* New arrivals grid */
+        /* Product Card for Product Grid Section */
         .product-card{ border-radius:12px; overflow:hidden; border:1px solid #eee; }
         .product-card .card-img-top{ height:300px; object-fit:cover; }
+        .btn-brand { background-color: var(--brand); border-color: var(--brand); color: white; }
+        .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
 
         /* floating whatsapp */
         .whatsapp-float{ position:fixed; right:18px; bottom:18px; background:#25D366; width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.6rem; z-index:999; box-shadow:0 8px 20px rgba(0,0,0,0.2); }
 
         /* responsive tweaks */
         @media(max-width:992px){ .slide-content h1{ font-size:2.4rem; } .slide-content p.lead{ font-size:1rem; } }
-        @media(max-width:576px){ .slide-content{ padding:18px; } .slide-content h1{ font-size:1.6rem; } .slide-content p.lead{ display:none; } }
+        @media(max-width:576px){ .slide-content{ padding:18px; } .slide-content h1{ font-size:1.6rem; } .slide-content p.lead{ display:none; } .category-text{ font-size:1.2rem; } .category-card{ height:100px; padding:15px; } }
 
         /* FIX FOR ICON ALIGNMENT: Ensures icons are displayed inline with links */
         .navbar-nav { align-items: center; }
@@ -80,7 +128,7 @@
     <div class="container">Free Shipping on Orders Above ₹1999 — Use code <a href="#">FREESHIP</a></div>
 </div>
 
-<!-- Updated NAVBAR Section - Clean version without duplicates -->
+<!-- Updated NAVBAR Section -->
 <nav class="navbar navbar-expand-lg main-nav">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="/">
@@ -95,14 +143,33 @@
 
             <!-- 1. MAIN LINKS -->
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <!-- HOME - ALWAYS ACTIVE ON INDEX.HTML -->
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="/">Home</a></li>
+
+                <!-- NEW ARRIVALS TAB -->
+                <li class="nav-item"><a class="nav-link" th:href="@{/products(sort='newest')}">New Arrivals</a></li>
+
+                <!-- SHOP DROPDOWN -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
                     <ul class="dropdown-menu" aria-labelledby="shopDropdown">
-                        <li><a class="dropdown-item" href="/products?category=Sarees">Sarees</a></li>
-                        <li><a class="dropdown-item" href="/products?category=Lehengas">Lehengas</a></li>
-                        <li><a class="dropdown-item" href="/products?category=Kurtis">Kurtis & Suits</a></li>
-                        <li><a class="dropdown-item" href="/products">All Products</a></li>
+                        <!-- START: EXPANDED CATEGORY LIST -->
+                        <li><a class="dropdown-item" th:href="@{/products(category='Long Frocks')}">Long Frocks</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Lehengas')}">Lehengas</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Mom & Me')}">Mom & Me</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Crop Top – Skirts')}">Crop Top – Skirts</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Handlooms')}">Handlooms</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Casual Frocks')}">Casual Frocks</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Ready To Wear')}">Ready To Wear</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Dupattas')}">Dupattas</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Kids wear')}">Kids wear</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Dress Material')}">Dress Material</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Sarees')}">Sarees</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Blouses')}">Blouses</a></li>
+                        <li><a class="dropdown-item" th:href="@{/products(category='Fabrics')}">Fabrics</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <!-- END: EXPANDED CATEGORY LIST -->
+                        <li><a class="dropdown-item" th:href="@{/products}">All Products</a></li>
                     </ul>
                 </li>
                 <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
@@ -119,11 +186,12 @@
                     </a>
                 </li>
 
-                <!-- USER NAME - Only when authenticated -->
+                <!-- USER NAME & LOGOUT - Only when authenticated (Admin/Customer) -->
                 <li class="nav-item" sec:authorize="isAuthenticated()">
                     <span class="nav-link text-white">
                         <i class="fa fa-user me-1"></i>
-                        <span sec:authentication="name">User</span>
+                        <span th:if="${customer != null}" th:text="'Welcome, ' + ${customer.firstName}">Welcome, Customer</span>
+                        <span th:unless="${customer != null}" sec:authentication="name">User</span>
                     </span>
                 </li>
 
@@ -163,117 +231,58 @@
         </div>
     </div>
 </nav>
-<!--&lt;!&ndash; NAVBAR (Thymeleaf will replace if fragment exists) &ndash;&gt;
-<nav class="navbar navbar-expand-lg main-nav">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;">
-            <span class="text-white">Anvi Studio</span>
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="mainNav">
-
-            &lt;!&ndash; 1. MAIN LINKS (Pushed left) &ndash;&gt;
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
-                    <ul class="dropdown-menu" aria-labelledby="shopDropdown">
-                        <li><a class="dropdown-item" href="/products?category=Sarees">Sarees</a></li>
-                        <li><a class="dropdown-item" href="/products?category=Lehengas">Lehengas</a></li>
-                        <li><a class="dropdown-item" href="/products?category=Kurtis">Kurtis & Suits</a></li>
-                        <li><a class="dropdown-item" href="/products">All Products</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
-            </ul>
-
-            &lt;!&ndash; 2. ICON GROUP (Pushed to the far right using ms-auto) &ndash;&gt;
-            <ul class="navbar-nav  mb-2 mb-lg-0">
-
-                &lt;!&ndash; LOGIN/PROFILE ICON &ndash;&gt;
-                <li class="nav-item">
-                    &lt;!&ndash; If logged out: Login &ndash;&gt;
-                    <a class="nav-link" th:href="@{/login}" sec:authorize="!isAuthenticated()">
-                        <i class="fa fa-user me-1"></i>
-                    </a>
-                </li>
-
-                &lt;!&ndash; WISHLIST ICON &ndash;&gt;
-                <li class="nav-item">
-                    &lt;!&ndash; If logged out: /wishlist-unauth (New requirement fulfilled here) &ndash;&gt;
-                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()">
-                        <i class="fa-regular fa-heart"></i>
-                    </a>
-                </li>
-
-                &lt;!&ndash; CART ICON &ndash;&gt;
-                <li class="nav-item">
-                    &lt;!&ndash; If logged out: /cart-unauth (New requirement fulfilled here) &ndash;&gt;
-                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()">
-                        <i class="fa fa-shopping-cart"></i>
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>-->
 
 <!-- HERO SLIDER -->
 <section class="hero-banner" aria-label="Hero">
     <div class="slides">
 
         <div class="slide active" data-index="0">
-            <img src="images/licensed-image.png" alt="Long Frocks">
+            <img th:src="@{/images/licensed-image.png}" alt="Long Frocks">
             <div class="slide-overlay"></div>
             <div class="slide-content">
                 <h1>Long Frocks</h1>
                 <p class="lead">Breezy long frocks crafted with premium fabrics — perfect for every occasion.</p>
-                <a class="btn btn-cta" href="/products?category=LongFrocks">SHOP NOW</a>
+                <a class="btn btn-cta" th:href="@{/products(category='Long Frocks')}">SHOP NOW</a>
             </div>
         </div>
 
         <div class="slide" data-index="1">
-            <img src="images/licensed-image1.jpg" alt="Ready To Wear">
+            <img th:src="@{/images/licensed-image1.jpg}" alt="Ready To Wear">
             <div class="slide-overlay"></div>
             <div class="slide-content">
                 <h1>Ready To Wear</h1>
                 <p class="lead">Classic ready-to-wear pieces updated with modern cuts.</p>
-                <a class="btn btn-cta" href="/products?category=ReadyToWear">SHOP NOW</a>
+                <a class="btn btn-cta" th:href="@{/products(category='Ready To Wear')}">SHOP NOW</a>
             </div>
         </div>
 
         <div class="slide" data-index="2">
-            <img src="images/licensed-image2.jpg" alt="Kidswear">
+            <img th:src="@{/images/licensed-image2.jpg}" alt="Kidswear">
             <div class="slide-overlay"></div>
             <div class="slide-content">
                 <h1>Kidswear</h1>
                 <p class="lead">Comfortable, colorful and adorable styles for the little ones.</p>
-                <a class="btn btn-cta" href="/products?category=Kidswear">SHOP NOW</a>
+                <a class="btn btn-cta" th:href="@{/products(category='Kids wear')}">SHOP NOW</a>
             </div>
         </div>
 
         <div class="slide" data-index="3">
-            <img src="images/licensed-image3.png" alt="Lehengas">
+            <img th:src="@{/images/licensed-image3.png}" alt="Lehengas">
             <div class="slide-overlay"></div>
             <div class="slide-content">
                 <h1>Lehengas</h1>
                 <p class="lead">Handpicked lehengas for weddings and festive celebrations.</p>
-                <a class="btn btn-cta" href="/products?category=Lehengas">SHOP NOW</a>
+                <a class="btn btn-cta" th:href="@{/products(category='Lehengas')}">SHOP NOW</a>
             </div>
         </div>
 
         <div class="slide" data-index="4">
-            <img src="images/licensed-image4.jpg" alt="Handlooms">
+            <img th:src="@{/images/licensed-image4.jpg}" alt="Handlooms">
             <div class="slide-overlay"></div>
             <div class="slide-content">
                 <h1>Handlooms</h1>
                 <p class="lead">Authentic handloom pieces woven by skilled artisans.</p>
-                <a class="btn btn-cta" href="/products?category=Handlooms">SHOP NOW</a>
+                <a class="btn btn-cta" th:href="@{/products(category='Handlooms')}">SHOP NOW</a>
             </div>
         </div>
 
@@ -287,104 +296,157 @@
     <div class="slider-dots" role="tablist"></div>
 </section>
 
-<!-- CATEGORIES (shop by category) -->
+<!-- CATEGORIES (shop by category) - UPDATED WITH EXTENDED LIST -->
 <section class="py-5">
     <div class="container">
-        <h2 class="text-center mb-4">Shop By Category</h2>
+        <h2 class="text-center mb-5 hero-title">Shop By Category</h2>
         <div class="row g-4">
+
+            <!-- Row 1: 3 Categories -->
             <div class="col-sm-6 col-md-4">
-                <a href="/products?category=Sarees" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="https://placehold.co/800x600/8B4513/ffffff?text=SAREES" class="img-fluid w-100" alt="Sarees">
-                        <div class="py-3 text-center bg-white">
-                            <h5 class="mb-0">SAREES</h5>
-                        </div>
-                    </div>
+                <a th:href="@{/products(category='Sarees')}" class="category-card shadow" style="background-color: #7B3F00;">
+                    <span class="category-text">Sarees</span>
+                    <img th:src="@{/images/shopcategory/sarees.png}" alt="Sarees" class="category-image">
                 </a>
             </div>
+
             <div class="col-sm-6 col-md-4">
-                <a href="/products?category=Lehengas" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="https://placehold.co/800x600/DAA520/ffffff?text=LEHENGAS" class="img-fluid w-100" alt="Lehengas">
-                        <div class="py-3 text-center bg-white"><h5 class="mb-0">LEHENGAS</h5></div>
-                    </div>
+                <a th:href="@{/products(category='Lehengas')}" class="category-card shadow" style="background-color: #B22222;">
+                    <span class="category-text">Lehengas</span>
+                    <img th:src="@{/images/shopcategory/lehengas.png}" alt="Lehengas" class="category-image">
                 </a>
             </div>
+
             <div class="col-sm-6 col-md-4">
-                <a href="/products?category=Kurtis" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="https://placehold.co/800x600/800080/ffffff?text=KURTIS" class="img-fluid w-100" alt="Kurtis">
-                        <div class="py-3 text-center bg-white"><h5 class="mb-0">KURTIS & SUITS</h5></div>
-                    </div>
+                <a th:href="@{/products(category='Kurtis')}" class="category-card shadow" style="background-color: #800080;">
+                    <span class="category-text">Kurtis & Suits</span>
+                    <img th:src="@{/images/shopcategory/kurthi&suits.png}" alt="Kurtis & Suits" class="category-image">
                 </a>
             </div>
+
+            <!-- Row 2: 3 Categories -->
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Long Frocks')}" class="category-card shadow" style="background-color: #4A90E2;">
+                    <span class="category-text">Long Frocks</span>
+                    <img th:src="@{/images/shopcategory/longfrock.png}" alt="Long Frocks" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Ready To Wear')}" class="category-card shadow" style="background-color: #D0021B;">
+                    <span class="category-text">Ready To Wear</span>
+                    <img th:src="@{/images/shopcategory/readymate.png}" alt="Ready To Wear" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Kids wear')}" class="category-card shadow" style="background-color: #50E3C2;">
+                    <span class="category-text">Kids wear</span>
+                    <img th:src="@{/images/shopcategory/kidswear.png}" alt="Kids wear" class="category-image">
+                </a>
+            </div>
+
+            <!-- Row 3: 3 Categories (Mom & Me, Dupattas, Blouses) -->
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Mom & Me')}" class="category-card shadow" style="background-color: #703B3B;">
+                    <span class="category-text">Mom & Me</span>
+                    <img th:src="@{/images/shopcategory/Mom-Me.png}" alt="Mom & Me" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Dupattas')}" class="category-card shadow" style="background-color: #7ED321;">
+                    <span class="category-text">Dupattas</span>
+                    <img th:src="@{/images/shopcategory/Dupatta.png}" alt="Dupattas" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Blouses')}" class="category-card shadow" style="background-color: #9013FE;">
+                    <span class="category-text">Blouses</span>
+                    <img th:src="@{/images/shopcategory/Blouses.png}" alt="Blouses" class="category-image">
+                </a>
+            </div>
+
         </div>
     </div>
 </section>
+<!-- END CATEGORIES -->
 
-<!-- NEW ARRIVALS (grid) -->
+
+<!-- NEW DYNAMIC PRODUCT GRID (Replacing the static "New Arrivals" and "Best Sellers" sections) -->
 <section class="py-5 bg-light">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="mb-0">New Arrivals</h3>
-            <a href="/products" class="text-decoration-none">View All</a>
-        </div>
-        <div class="row g-4">
-            <!-- example products -->
-            <div class="col-sm-6 col-md-4 col-lg-3">
-                <div class="card product-card">
-                    <img src="images/licensed-image.jpg" class="card-img-top" alt="product">
-                    <div class="card-body">
-                        <h6 class="card-title">Elegant Long Frock</h6>
-                        <p class="mb-2 text-muted">₹2,199</p>
-                        <a href="/products/1" class="btn btn-outline-dark btn-sm">View</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-md-4 col-lg-3">
-                <div class="card product-card">
-                    <img src="images/licensed-image1.jpg" class="card-img-top" alt="product">
-                    <div class="card-body">
-                        <h6 class="card-title">Silk Saree</h6>
-                        <p class="mb-2 text-muted">₹3,499</p>
-                        <a href="/products/2" class="btn btn-outline-dark btn-sm">View</a>
-                    </div>
-                </div>
-            </div>
-            <!-- add more product cards as needed -->
-        </div>
-    </div>
-</section>
+        <!-- Optional Welcome Message for Authenticated Users -->
+        <h2 class="text-center mb-4" sec:authorize="isAuthenticated()">
+            <span th:if="${customer != null}" th:text="'Welcome Back, ' + ${customer.firstName} + '!'">Welcome Back!</span>
+            <span th:unless="${customer != null}" th:text="'Welcome Back!'">Welcome Back!</span>
+        </h2>
+        <h3 class="mb-4">Featured Products <small class="text-muted">(Latest Arrivals)</small></h3>
 
-<!-- BEST SELLERS (tabs) -->
-<section class="py-5">
-    <div class="container">
-        <h3 class="mb-4">Best Selling</h3>
-        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-            <li class="nav-item" role="presentation"><button class="nav-link active" id="pills-toprated-tab" data-bs-toggle="pill" data-bs-target="#toprated" type="button">Top Rated</button></li>
-            <li class="nav-item" role="presentation"><button class="nav-link" id="pills-selling-tab" data-bs-toggle="pill" data-bs-target="#selling" type="button">Best Selling</button></li>
-            <li class="nav-item" role="presentation"><button class="nav-link" id="pills-recent-tab" data-bs-toggle="pill" data-bs-target="#recent" type="button">Recent</button></li>
-        </ul>
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="toprated">
-                <div class="row g-4">
-                    <div class="col-md-4 col-lg-3">
-                        <div class="card product-card"><img src="https://placehold.co/600x600/efe3ff/333?text=Top+1" class="card-img-top"><div class="card-body"><h6>Top Rated 1</h6><p class="text-muted">₹2,999</p></div></div>
+        <!-- Flash Messages (for cart/wishlist actions, passed via RedirectAttributes) -->
+        <div th:if="${wishlistMessage}" class="alert alert-success" role="alert" th:text="${wishlistMessage}"></div>
+        <div th:if="${cartMessage}" class="alert alert-success" role="alert" th:text="${cartMessage}"></div>
+        <div th:if="${wishlistError}" class="alert alert-danger" role="alert" th:text="${wishlistError}"></div>
+        <div th:if="${cartError}" class="alert alert-danger" role="alert" th:text="${cartError}"></div>
+
+        <div class="row g-4">
+            <!-- Loop through products provided by HomeController -->
+            <div class="col-sm-6 col-md-4 col-lg-3" th:each="p : ${products}">
+                <div class="card product-card shadow-sm h-100">
+                    <!-- Product Image -->
+                    <img th:src="${p.imageUrl != null ? p.imageUrl : 'https://placehold.co/600x600/ccc/333?text=No+Image'}"
+                         onerror="this.onerror=null; this.src='https://placehold.co/600x600/ccc/333?text=Error+Loading';"
+                         class="card-img-top"
+                         alt="Product Image">
+
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title" th:text="${p.name}">Product Name</h5>
+                        <p class="text-muted small mb-2" th:text="${p.category}"></p>
+
+                        <p class="card-text text-success fw-bold fs-5 mt-auto">
+                            ₹ <span th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                        </p>
+                        <p class="card-text text-muted small">
+                            Stock: <span th:text="${p.stockQuantity}">0</span>
+                        </p>
+
+                        <!-- Actions for Authenticated Users (Cart/Wishlist) -->
+                        <div class="mt-2 btn-group" role="group" sec:authorize="isAuthenticated()">
+                            <!-- 1. ADD TO CART Button (POSTs to CartController) -->
+                            <form th:action="@{/cart/add}" method="post" class="d-inline w-50">
+                                <input type="hidden" name="productId" th:value="${p.id}">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-brand w-100 btn-sm" th:disabled="${p.stockQuantity == 0}">
+                                    <i class="fa fa-shopping-bag me-1"></i> Cart
+                                </button>
+                            </form>
+
+                            <!-- 2. ADD TO WISHLIST Button (POSTs to WishlistController) -->
+                            <form th:action="@{/wishlist/add/{productId}(productId=${p.id})}" method="post" class="d-inline w-50">
+                                <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
+                                    <i class="fa-regular fa-heart"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Action for Unauthenticated Users (View Details) or general View Details -->
+                        <a th:href="@{'/products/' + ${p.id}}"
+                           th:classappend="${#authentication.name} == 'anonymousUser' ? 'w-100' : ''"
+                           class="btn btn-dark btn-sm mt-2">
+                            View Details
+                        </a>
                     </div>
-                    <!-- ... -->
                 </div>
             </div>
-            <div class="tab-pane fade" id="selling">
-                <div class="row g-4">
-                    <div class="col-md-4 col-lg-3"><div class="card product-card"><img src="https://placehold.co/600x600/f7f1e0/333?text=Sell+1" class="card-img-top"><div class="card-body"><h6>Best Seller 1</h6><p class="text-muted">₹1,799</p></div></div></div>
-                </div>
-            </div>
-            <div class="tab-pane fade" id="recent">
-                <div class="row g-4"><div class="col-md-4 col-lg-3"><div class="card product-card"><img src="images/licensed-imagekid.jpg" class="card-img-top"><div class="card-body"><h6>Recent 1</h6><p class="text-muted">₹999</p></div></div></div></div>
-            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(products)}" class="alert alert-info mt-5 text-center">
+            No products available at the moment.
         </div>
     </div>
 </section>
+<!-- END NEW DYNAMIC PRODUCT GRID -->
 
 <!-- FLOATING WHATSAPP -->
 <a class="whatsapp-float" href="https://wa.me/919490334557" target="_blank" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>
@@ -394,23 +456,23 @@
     <div class="container">
         <div class="row">
             <div class="col-md-4 mb-3"><h5>Anvi Studio</h5><p class="small">Handpicked ethnic wear for every occasion.</p></div>
-            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a href="/products?category=Sarees" class="text-white">Sarees</a></li><li><a href="/products?category=Lehengas" class="text-white">Lehengas</a></li></ul></div>
+            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a th:href="@{/products(category='Sarees')}" class="text-white">Sarees</a></li><li><a th:href="@{/products(category='Lehengas')}" class="text-white">Lehengas</a></li></ul></div>
             <div class="col-md-3 mb-3"><h6>Contact</h6><p class="small">Vijayawada, India<br><a href="mailto:avnistudio@gmail.com" class="text-white">avnistudio@gmail.com</a></p></div>
             <div class="col-md-3 mb-3"><h6>Follow</h6><!--<p><a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a><a href="#" class="text-white"><i class="fab fa-facebook"></i></a></p>-->
                 <div class="d-flex my-3 fs-5">
-                <a href="https://www.facebook.com/bharatheswar.kodali/"
-                   class="text-white me-3">
-                    <i class="fab fa-facebook-f"></i>
-                </a>
-                <a href="https://www.instagram.com/avnistudio"
-                   class="text-white me-3">
-                    <i class="fab fa-instagram"></i>
-                </a>
-                <a href="https://wa.me/919490334557"
-                   class="text-white">
-                    <i class="fab fa-whatsapp"></i>
-                </a>
-             </div>
+                    <a href="https://www.facebook.com/bharatheswar.kodali/"
+                       class="text-white me-3">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="https://www.instagram.com/avnistudio"
+                       class="text-white me-3">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    <a href="https://wa.me/919490334557"
+                       class="text-white">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
