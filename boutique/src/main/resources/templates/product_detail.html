@@ -9,64 +9,77 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
     <style>
         :root{ --brand:#ff7c04; --dark:#222; }
-        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
         .main-content { flex-grow: 1; }
+
+        /* Navbar/Offer Bar Styles (for consistency with fragment) */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
         .main-nav{ background:#000; color:#fff; }
-        .nav-link.active, .nav-link:hover { color: var(--brand); font-weight: 700; border-bottom: 2px solid var(--brand); padding-bottom: 4px; }
-        .nav-link { color: #fff; padding-bottom: 8px; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover, .main-nav .nav-link.active { color: var(--brand); font-weight: 700; border-bottom: 2px solid var(--brand); padding-bottom: 4px; }
+        .navbar-nav { align-items: center; }
+
         .product-main-image { max-height: 550px; object-fit: cover; border-radius: 12px; }
         .btn-brand { background-color: var(--brand); border-color: var(--brand); color: white; }
         .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
-        .price-display { color: var(--dark); font-size: 2.5rem; font-weight: 700; }
+
+        /* Price Display Styles for Detail Page */
+        .price-display-wrapper { margin-bottom: 15px; }
+        .price-display { color: var(--dark); font-size: 2.5rem; font-weight: 700; display: inline-block; }
+
+        /* Discount Styles */
+        .original-price {
+            text-decoration: line-through;
+            color: #888;
+            font-size: 0.5em;
+            margin-right: 15px;
+            display: block;
+            font-weight: 400;
+        }
+        .discount-badge {
+            font-size: 0.4em;
+            vertical-align: top;
+            margin-left: 10px;
+            padding: 4px 8px;
+        }
+
+        /* NEW: Sale/Clearance Status Text */
+        .sale-tag {
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 15px;
+            color: #007bff; /* Sale blue */
+        }
+        .clearance-tag {
+             font-size: 1.2rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 15px;
+            color: #dc3545; /* Clearance red */
+        }
+
         .sku-tag { background-color: #eee; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; }
         .info-tab-link { color: #555; font-weight: 500; transition: color 0.2s; }
         .info-tab-link.active { color: var(--dark); border-bottom: 2px solid var(--brand); }
         .related-product-card img { height: 200px; object-fit: cover; }
         .share-icon { font-size: 1.2rem; transition: color 0.2s; }
         .share-icon:hover { color: var(--brand); }
+
         /* Footer consistency */
         footer { background-color: var(--dark); color: #fff; margin-top: auto; padding: 15px 0; }
     </style>
 </head>
 <body>
 
-<!-- Offer bar -->
-<div class="offer-bar text-center" style="background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0;">
-    <div class="container">Free Shipping on Orders Above ₹1999 — Use code <a href="#" style="color:var(--brand); text-decoration:none; font-weight:600;">FREESHIP</a></div>
-</div>
-
-<!-- NAVBAR (Standardized from index.html) -->
-<nav class="navbar navbar-expand-lg main-nav">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;">
-            <span class="text-white">Anvi Studio</span>
-        </a>
-        <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/products(sort='newest')}">New Arrivals</a></li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle active" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
-                    <ul class="dropdown-menu" aria-labelledby="shopDropdown">
-                        <li><a class="dropdown-item" th:href="@{/products(category='Sarees')}">Sarees</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Lehengas')}">Lehengas</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Kurtis')}">Kurtis & Suits</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" th:href="@{/products}">All Products</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
-            </ul>
-        </div>
-        <div class="d-flex align-items-center">
-            <a class="nav-link text-white me-3" th:href="@{/login}" sec:authorize="!isAuthenticated()"><i class="fa fa-user"></i></a>
-            <a class="nav-link text-white me-3" th:href="@{/wishlist}"><i class="fa-regular fa-heart"></i></a>
-            <a class="nav-link text-white me-3" th:href="@{/cart}"><i class="fa fa-shopping-cart"></i></a>
-        </div>
-    </div>
-</nav>
+<!-- INCLUDE REUSABLE NAVBAR FRAGMENT -->
+<div th:insert="~{navbar.html :: main-navbar(currentPage='shop')}"></div>
 
 <!-- MAIN CONTENT WRAPPER -->
 <div class="main-content container my-5">
@@ -97,9 +110,36 @@
         <div class="col-lg-6">
             <h1 class="display-6 fw-bold" th:text="${product.name}">Product Name</h1>
 
-            <p class="price-display mb-3">
-                ₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
-            </p>
+            <!-- Price Display Wrapper (Updated for Discount & Sale Status) -->
+            <div class="price-display-wrapper">
+                <span th:if="${product.discountPercent > 0}">
+                    <!-- Original Price (Strike-through) -->
+                    <span class="original-price">
+                         MRP: ₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </span>
+                    <!-- Discounted Price -->
+                    <span class="price-display text-success">
+                         ₹ <span th:text="${#numbers.formatDecimal(product.getDiscountedPrice(), 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </span>
+                    <!-- Discount Badge -->
+                    <span class="badge bg-danger discount-badge" th:text="${product.discountPercent} + '% OFF'">10% OFF</span>
+
+                    <!-- NEW: Sale/Clearance Tag -->
+                    <span th:if="${product.isClearance()}" class="clearance-tag">
+                        <i class="fa fa-fire me-1"></i> CLEARANCE SALE!
+                    </span>
+                    <span th:unless="${product.isClearance()}" class="sale-tag">
+                        <i class="fa fa-tag me-1"></i> ON SALE
+                    </span>
+                </span>
+
+                <span th:unless="${product.discountPercent > 0}">
+                    <!-- Regular Price -->
+                    <span class="price-display">
+                         ₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </span>
+                </span>
+            </div>
 
             <p class="mb-1">
                 <span class="sku-tag me-2" th:text="'SKU: ' + ${product.sku}">SKU</span>
@@ -210,6 +250,7 @@
                     <p class="mb-1"><strong>Category:</strong> <span th:text="${product.category}"></span></p>
                     <p class="mb-1"><strong>SKU/Model:</strong> <span th:text="${product.sku ?: 'N/A'}"></span></p>
                     <p class="mb-1"><strong>Available Sizes:</strong> <span th:text="${product.sizeOptions ?: 'N/A'}"></span></p>
+                    <p class="mb-1"><strong>Discount Applied:</strong> <span th:text="${product.discountPercent} + '%'">0%</span></p>
                 </div>
             </div>
 
@@ -232,14 +273,28 @@
         <div class="row g-4" th:unless="${#lists.isEmpty(relatedProducts)}">
             <div class="col-sm-6 col-md-4 col-lg-3" th:each="relatedP : ${relatedProducts}">
                 <a th:href="@{'/products/' + ${relatedP.id}}" class="card shadow-sm h-100 text-decoration-none text-dark related-product-card">
+
+                    <!-- NEW: SALE/CLEARANCE BADGE on related product -->
+                    <span th:if="${relatedP.isClearance()}" class="sale-status-badge clearance-badge">CLEARANCE!</span>
+                    <span th:unless="${relatedP.isClearance() or relatedP.discountPercent == 0}" class="sale-status-badge sale-badge">SALE</span>
+
                     <img th:src="${relatedP.imageUrl}"
                          onerror="this.onerror=null; this.src='https://placehold.co/400x200/ccc/333?text=Related';"
                          class="card-img-top"
                          alt="Related Product Image">
                     <div class="card-body">
                         <h6 class="card-title mb-1" th:text="${relatedP.name}">Related Name</h6>
-                        <p class="text-success fw-bold">
-                            ₹ <span th:text="${#numbers.formatDecimal(relatedP.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+
+                        <!-- Related Product Price Display (with discount) -->
+                        <p class="card-text fw-bold">
+                            <span th:if="${relatedP.discountPercent > 0}" class="text-secondary d-block">
+                                <span class="original-price" style="font-size: 0.75em;">₹ <span th:text="${#numbers.formatDecimal(relatedP.price, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                                <br>
+                                <span class="text-success">₹ <span th:text="${#numbers.formatDecimal(relatedP.getDiscountedPrice(), 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                            </span>
+                            <span th:unless="${relatedP.discountPercent > 0}" class="text-success">
+                                ₹ <span th:text="${#numbers.formatDecimal(relatedP.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                            </span>
                         </p>
                     </div>
                 </a>
@@ -251,17 +306,8 @@
 <!-- END MAIN CONTENT WRAPPER -->
 
 
-<!-- FOOTER (Standardized structure) -->
-<footer class="py-5" style="background-color:var(--dark); color:#fff;">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-3"><h5>Anvi Studio</h5><p class="small">Handpicked ethnic wear for every occasion.</p></div>
-            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a th:href="@{/products(category='Sarees')}" class="text-white">Sarees</a></li><li><a th:href="@{/products(category='Lehengas')}" class="text-white">Lehengas</a></li></ul></div>
-            <div class="col-md-3 mb-3"><h6>Contact</h6><p class="small">Vijayawada, India<br><a href="mailto:avnistudio@gmail.com" class="text-white">avnistudio@gmail.com</a></p></div>
-            <div class="col-md-3 mb-3"><h6>Follow</h6><div class="d-flex my-3 fs-5"><a href="https://www.facebook.com/bharatheswar.kodali/" class="text-white me-3"><i class="fab fa-facebook-f"></i></a><a href="https://www.instagram.com/avnistudio" class="text-white me-3"><i class="fab fa-instagram"></i></a><a href="https://wa.me/919490334557" class="text-white"><i class="fab fa-whatsapp"></i></a></div></div>
-        </div>
-    </div>
-</footer>
+<!-- Include the centralized footer fragment -->
+<div th:replace="~{footer.html :: footer}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -272,6 +318,7 @@
         // This is a browser feature, but may not work in all limited environments (like some sandbox iframes)
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(() => {
+                // IMPORTANT: Replace alert() with a custom modal/message box in a final app
                 alert("Product link copied to clipboard!");
             }).catch(err => {
                 fallbackCopyTextToClipboard(url);
@@ -292,6 +339,7 @@
         textArea.select();
         try {
             const successful = document.execCommand('copy');
+            // IMPORTANT: Replace alert() with a custom modal/message box in a final app
             const msg = successful ? 'Product link copied!' : 'Failed to copy text.';
             alert(msg);
         } catch (err) {

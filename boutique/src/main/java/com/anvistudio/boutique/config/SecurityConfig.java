@@ -67,7 +67,8 @@ public class SecurityConfig {
                                 "/products",            // Main catalog page
                                 "/products/**",         // Catalog/Detail pages
                                 "/wishlist-unauth",
-                                "/cart-unauth"
+                                "/cart-unauth",
+                                "/custom-request"
                         ).permitAll()
 
                         // All other requests must be authenticated

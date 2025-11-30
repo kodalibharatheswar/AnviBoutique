@@ -8,33 +8,60 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
   <style>
     :root{ --brand:#ff7c04; --dark:#222; }
-    body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; }
+
+    /* FIX: Add Flexbox to Body to Push Footer Down */
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f7f7f7;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .main-content {
+        flex-grow: 1;
+    }
+
+    /* FIX: Navbar styling for consistency */
+    .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
     .main-nav { background-color: var(--dark) !important; color:#fff; }
+    .main-nav .nav-link:hover,
+    .main-nav .nav-link.active {
+        color: var(--brand);
+        font-weight: 700;
+        border-bottom: 2px solid var(--brand);
+        padding-bottom: 4px;
+    }
+    .navbar-nav { align-items: center; }
+
     .product-image { height: 100px; width: 100px; object-fit: cover; border-radius: 8px; }
     .cart-card { border-left: 5px solid var(--brand); }
     .btn-brand { background-color: var(--brand); border-color: var(--brand); color: white; }
     .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
     .summary-card { background-color: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .qty-input { width: 60px; text-align: center; }
+
+    /* Price Discount Styles */
+    .original-price { text-decoration: line-through; color: #888; font-size: 0.8em; margin-right: 5px; }
+    .discount-badge { font-size: 0.7em; margin-left: 5px; }
+
+    /* NEW: Sale/Clearance Status Text in list item */
+    .item-sale-tag {
+        font-size: 0.75em;
+        font-weight: bold;
+        margin-left: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .item-sale { background-color: #e6f2ff; color: #007bff; } /* Light blue/blue */
+    .item-clearance { background-color: #f8d7da; color: #dc3545; } /* Light red/red */
   </style>
 </head>
 <body>
 
-<!-- NAVBAR (Generic placeholder) -->
-<nav class="navbar navbar-expand-lg main-nav">
-  <div class="container-fluid">
-    <a class="navbar-brand ms-3 text-white" href="/">Anvi Studio</a>
-    <div class="d-flex align-items-center">
-      <span class="text-white me-3 small" sec:authentication="name">Customer</span>
-      <a class="btn btn-sm me-3" th:href="@{/wishlist}"><i class="fa-regular fa-heart text-white"></i></a>
-      <form th:action="@{/logout}" method="post">
-        <button type="submit" class="btn btn-danger btn-sm me-3">Logout</button>
-      </form>
-    </div>
-  </div>
-</nav>
+<!-- INCLUDE REUSABLE NAVBAR FRAGMENT -->
+<div th:insert="~{navbar.html :: main-navbar(currentPage='cart')}"></div>
 
-<div class="container mt-5">
+<div class="main-content container mt-5">
   <h1 class="mb-4 hero-title">Your Shopping Cart <i class="fa fa-shopping-cart"></i></h1>
   <hr>
 
@@ -67,8 +94,23 @@
             <div class="col-md-5 col-9">
               <h5 class="mb-1" th:text="${item.product.name}">Product Name</h5>
               <p class="text-muted small mb-0" th:text="${item.product.category}">Category</p>
+
+              <!-- Unit Price Display (Updated for Discount & Sale Status) -->
               <p class="fw-bold fs-6 text-dark mb-0">
-                Unit Price: ₹ <span th:text="${#numbers.formatDecimal(item.product.price, 0, 'COMMA', 2, 'POINT')}">1000.00</span>
+                Unit Price:
+                <span th:if="${item.product.discountPercent > 0}" class="text-secondary">
+                    <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(item.product.price, 0, 'COMMA', 2, 'POINT')}">1000.00</span></span>
+                    <span class="badge bg-danger discount-badge" th:text="'-' + ${item.product.discountPercent} + '%'">-10%</span>
+                </span>
+                <span class="text-success">₹ <span th:text="${#numbers.formatDecimal(item.product.discountedPrice, 0, 'COMMA', 2, 'POINT')}">900.00</span></span>
+
+                <!-- NEW: SALE/CLEARANCE STATUS -->
+                <span th:if="${item.product.isClearance()}" class="item-sale-tag item-clearance">
+                    CLEARANCE
+                </span>
+                <span th:unless="${item.product.isClearance() or item.product.discountPercent == 0}" class="item-sale-tag item-sale">
+                    SALE
+                </span>
               </p>
             </div>
 
@@ -79,7 +121,9 @@
                 <label for="quantity" class="me-2 small">Qty:</label>
                 <input type="number" name="quantity" th:value="${item.quantity}" min="0" class="form-control form-control-sm qty-input" onchange="this.form.submit()">
               </form>
-              <small class="text-muted d-block mt-1">Total: ₹<span th:text="${#numbers.formatDecimal(item.totalPrice, 0, 'COMMA', 2, 'POINT')}"></span></small>
+              <small class="text-muted d-block mt-1">
+                Total: ₹<span th:text="${#numbers.formatDecimal(item.totalPrice, 0, 'COMMA', 2, 'POINT')}"></span>
+              </small>
             </div>
 
             <!-- Remove Action -->
@@ -123,6 +167,9 @@
     </div>
   </div>
 </div>
+
+<!-- Include the centralized footer fragment -->
+<div th:replace="~{footer.html :: footer}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

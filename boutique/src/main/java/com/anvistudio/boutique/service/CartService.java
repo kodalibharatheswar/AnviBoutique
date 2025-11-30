@@ -88,6 +88,7 @@ public class CartService {
 
     /**
      * Calculates the total price for all items in the cart.
+     * This method automatically uses the updated CartItem.getTotalPrice() calculation.
      */
     public double getCartTotal(Long userId) {
         return getCartItems(userId).stream()

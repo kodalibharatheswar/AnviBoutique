@@ -45,6 +45,7 @@ public class ProductController {
 
     /**
      * Displays the product listing page with filtering and sorting options.
+     * **MODIFIED: Added keyword parameter.**
      */
     @GetMapping("/products")
     public String viewProductCatalog(
@@ -53,15 +54,22 @@ public class ProductController {
             @RequestParam(value = "minPrice", required = false) Double minPrice,
             @RequestParam(value = "maxPrice", required = false) Double maxPrice,
             @RequestParam(value = "status", required = false) String status,
-            @RequestParam(value = "color", required = false) String color, // NEW PARAMETER
+            @RequestParam(value = "color", required = false) String color,
+            @RequestParam(value = "keyword", required = false) String keyword, // NEW PARAMETER
             Model model) {
 
         // Use the comprehensive filtering service method
         List<Product> products = productService.getFilteredProducts(
-                category, sortBy, minPrice, maxPrice, status, color);
+                category, sortBy, minPrice, maxPrice, status, color, keyword); // PASS KEYWORD
 
         model.addAttribute("products", products);
-        model.addAttribute("currentCategory", category != null && !category.isEmpty() ? category : "All Products");
+
+        // Prepare display header based on keyword or category
+        String currentCategoryDisplay = category != null && !category.isEmpty() ? category : "All Products";
+        if (keyword != null && !keyword.isEmpty()) {
+            currentCategoryDisplay = "Search results for: '" + keyword + "'";
+        }
+        model.addAttribute("currentCategory", currentCategoryDisplay); // UPDATED
 
         // Pass filter states back to the view for form persistence
         model.addAttribute("selectedSortBy", sortBy);
@@ -69,10 +77,11 @@ public class ProductController {
         model.addAttribute("selectedColor", color);
         model.addAttribute("minPriceValue", minPrice);
         model.addAttribute("maxPriceValue", maxPrice);
+        model.addAttribute("currentKeyword", keyword); // NEW: Pass keyword back
 
         // Pass filter lists to the view
         model.addAttribute("allCategories", getAllCategories());
-        model.addAttribute("filterColors", getFilterColors()); // Pass filter color list
+        model.addAttribute("filterColors", getFilterColors());
 
         return "products";
     }

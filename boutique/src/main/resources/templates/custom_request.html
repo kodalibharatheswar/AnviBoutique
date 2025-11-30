@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="utf-8" />
+  <title>Customization Request - Anvi Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap, Fonts, Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+        --brand:#ff7c04;
+        --dark:#222;
+    }
+    body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+    .main-content { flex-grow: 1; padding-top: 40px; padding-bottom: 40px; }
+    .main-nav{ background:#000; color:#fff; }
+    .main-nav .nav-link{ color:#fff; }
+    .main-nav .nav-link:hover,
+    .main-nav .nav-link.active {
+        color: var(--brand);
+        font-weight: 700;
+        border-bottom: 2px solid var(--brand);
+        padding-bottom: 4px;
+    }
+    .navbar-nav { align-items: center; }
+
+    /* Customization Section Styling */
+    .customization-section {
+        background: #fff;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--dark); }
+    .social-link { color: #555; font-size: 1.5rem; transition: color 0.3s; }
+    .social-link:hover { color: var(--brand); }
+  </style>
+</head>
+<body>
+
+<!-- INCLUDE REUSABLE NAVBAR FRAGMENT -->
+<!-- We pass the 'currentPage' variable to highlight the active link in the navbar -->
+<div th:insert="~{navbar.html :: main-navbar(currentPage='home')}"></div>
+
+
+<!-- MAIN CONTENT: CUSTOMIZATION SECTION -->
+<div class="main-content container">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+
+      <h1 class="hero-title display-5 mb-4 text-center">Your Dream Design Starts Here</h1>
+
+      <div class="customization-section text-center">
+        <i class="fas fa-magic fa-4x text-primary mb-4" style="color: var(--brand) !important;"></i>
+
+        <h4 class="mb-3">Personalized Outfit Customization by Anvi Studio</h4>
+
+        <p class="lead text-muted">Hello beautiful,</p>
+
+        <p class="px-md-5 mx-md-5">
+          We know you love our designs so dearly! If you have **new designs** in mind that aren't on our website, or if you're struggling to decide on a color or fabric that will look best on you, we are here to help. Whether you need a suggestion for your **big day outfit** or a perfect ensemble for an event, we welcome your request.
+        </p>
+
+        <p class="fw-bold mt-4">
+          Get in touch with us directly on our social platforms or email us:
+        </p>
+
+        <div class="d-flex justify-content-center gap-4 mt-3">
+          <a href="https://www.instagram.com/avnistudio" target="_blank" class="social-link" title="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="https://www.facebook.com/bharatheswar.kodali/" target="_blank" class="social-link" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="mailto:aanyasriboutique@gmail.com" class="social-link" title="Email"><i class="fas fa-envelope"></i></a>
+        </div>
+
+        <p class="mt-4 small text-muted">
+          We would love to see your dream dress take shape! 😊
+        </p>
+        <p class="mt-2 small text-danger fw-bold">
+          For faster communication, please include design inspiration photos and your contact number in your email.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END MAIN CONTENT -->
+
+<!-- Include the centralized footer fragment -->
+<div th:replace="~{footer.html :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

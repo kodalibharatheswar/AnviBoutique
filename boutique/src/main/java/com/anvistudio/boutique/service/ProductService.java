@@ -38,64 +38,69 @@ public class ProductService {
     }
 
 
+    // ... (other methods remain unchanged)
+
     /**
-     * NEW: Retrieves products based on multiple filter and sort criteria.
-     * **FIXED: Now accepts 6 arguments including color.**
+     * Retrieves products based on multiple filter and sort criteria.
      */
-    public List<Product> getFilteredProducts(String category, String sortBy, Double minPrice, Double maxPrice, String status, String color) {
+    public List<Product> getFilteredProducts(String category, String sortBy, Double minPrice, Double maxPrice, String status, String color, String keyword) {
         List<Product> products;
 
-        // 1. Base Retrieval (Filter by Category at the DB level)
-        if (category != null && !category.trim().isEmpty()) {
+        // 1. Base Retrieval (Filter by Keyword first for broad search, or Category)
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            products = productRepository.searchByKeyword(keyword.trim());
+            category = null;
+        } else if (category != null && !category.trim().isEmpty()) {
             products = productRepository.findByCategory(category.trim());
         } else {
             products = productRepository.findAll();
         }
 
-        // 2. Filter by Price (In-memory filtering)
+        // 2. Filter by Price (In-memory filtering - FIX APPLIED HERE)
         if (minPrice != null || maxPrice != null) {
             products.removeIf(p -> {
-                double price = p.getPrice().doubleValue();
+                // *** FIX: Use discounted price for comparison in price range filtering ***
+                double price = p.getDiscountedPrice().doubleValue();
                 if (minPrice != null && price < minPrice) return true;
                 if (maxPrice != null && price > maxPrice) return true;
                 return false;
             });
         }
 
-        // 3. Filter by Color (In-memory filtering using the new productColor field)
+        // 3. Filter by Color (In-memory filtering)
         if (color != null && !color.trim().isEmpty()) {
             final String normalizedColor = color.trim().toLowerCase();
             products.removeIf(p -> p.getProductColor() == null || !p.getProductColor().toLowerCase().contains(normalizedColor));
         }
 
 
-        // 4. Filter by Status (In-memory filtering based on stock)
+        // 4. Filter by Status (In-memory filtering)
         if (status != null && !status.isEmpty()) {
             switch (status) {
                 case "inStock":
-                    // Filter: Stock quantity greater than 0 AND is Available
                     products.removeIf(p -> p.getStockQuantity() <= 0 || !p.getIsAvailable());
                     break;
                 case "lowStock":
-                    // Filter: Stock quantity between 1 and 5
                     products.removeIf(p -> p.getStockQuantity() <= 0 || p.getStockQuantity() > 5 || !p.getIsAvailable());
                     break;
                 case "onSale":
-                    // Requires an 'isOnSale' field, placeholder logic
-                    products.removeIf(p -> true);
+                    products.removeIf(p -> p.getDiscountPercent() <= 0);
+                    break;
+                case "clearance":
+                    products.removeIf(p -> !p.isClearance());
                     break;
             }
         }
 
-        // 5. Sort (In-memory sorting)
+        // 5. Sort (In-memory sorting already uses discounted price correctly)
         if (sortBy != null && !sortBy.isEmpty()) {
             Comparator<Product> comparator;
             switch (sortBy) {
                 case "priceAsc":
-                    comparator = Comparator.comparing(Product::getPrice);
+                    comparator = Comparator.comparing(Product::getDiscountedPrice);
                     break;
                 case "priceDesc":
-                    comparator = Comparator.comparing(Product::getPrice).reversed();
+                    comparator = Comparator.comparing(Product::getDiscountedPrice).reversed();
                     break;
                 case "oldest":
                     comparator = Comparator.comparing(Product::getDateCreated);
@@ -115,13 +120,22 @@ public class ProductService {
     }
 
 
-
     /**
      * Retrieves the top 8 latest products for display (uses the sorting query).
      */
     public List<Product> getDisplayableProducts() {
-        return productRepository.findTop8ByOrderByDateCreatedDesc();
+        // Ensure the home page only shows available products (good practice)
+        List<Product> availableProducts = productRepository.findTop8ByOrderByDateCreatedDesc();
+        availableProducts.removeIf(p -> !p.getIsAvailable());
+        return availableProducts;
     }
+
+    /**
+     * Retrieves the top 8 latest products for display (uses the sorting query).
+     */
+/*    public List<Product> getDisplayableProducts() {
+        return productRepository.findTop8ByOrderByDateCreatedDesc();
+    }*/
 
     /**
      * Retrieves products based on category, or all products if category is null/empty.

@@ -84,6 +84,15 @@ public class HomeController {
         return "redirect:/contact";
     }
 
+
+    /**
+     * NEW: Handler for the Customization Request page.
+     */
+    @GetMapping("/custom-request")
+    public String customRequestPage() {
+        return "custom_request"; // Maps to the new template
+    }
+
     // --- NEW REQUIREMENT: Public pages for unauthenticated Wishlist/Cart ---
 
     /**

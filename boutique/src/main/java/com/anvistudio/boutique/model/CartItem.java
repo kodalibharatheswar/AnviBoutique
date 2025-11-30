@@ -37,8 +37,12 @@ public class CartItem {
     @Temporal(TemporalType.TIMESTAMP)
     private Date dateAdded = new Date();
 
-    // Helper method to calculate the total price for this item
+    /**
+     * Helper method to calculate the total price for this item.
+     * CRITICAL FIX: Uses the discounted price from the Product entity.
+     */
     public double getTotalPrice() {
-        return this.product.getPrice().doubleValue() * this.quantity;
+        // Use doubleValue() for arithmetic, relying on Product to handle BigDecimal precision.
+        return this.product.getDiscountedPrice().doubleValue() * this.quantity;
     }
 }

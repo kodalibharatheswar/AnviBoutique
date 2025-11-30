@@ -132,13 +132,19 @@
                             <input type="text" th:field="*{sku}" class="form-control" id="sku" placeholder="e.g., LEH2024-5">
                         </div>
 
-                        <!-- Row 2: Pricing and Inventory -->
-                        <div class="col-md-6">
+                        <!-- Row 2: Pricing and Inventory (Updated for Discount) -->
+                        <div class="col-md-4">
                             <label for="price" class="form-label">Price (₹)</label>
                             <input type="number" th:field="*{price}" class="form-control" id="price" step="0.01" required>
                         </div>
 
-                        <div class="col-md-6">
+                        <!-- Discount Percentage -->
+                        <div class="col-md-4">
+                            <label for="discountPercent" class="form-label">Discount (%)</label>
+                            <input type="number" th:field="*{discountPercent}" class="form-control" id="discountPercent" min="0" max="100" value="0">
+                        </div>
+
+                        <div class="col-md-4">
                             <label for="stockQuantity" class="form-label">Stock Quantity</label>
                             <input type="number" th:field="*{stockQuantity}" class="form-control" id="stockQuantity" required>
                         </div>
@@ -193,7 +199,7 @@
                             <textarea th:field="*{deliveryAndReturnPolicy}" class="form-control" id="deliveryAndReturnPolicy" rows="2" placeholder="Example: 7-day exchange only on damaged goods."></textarea>
                         </div>
 
-                        <!-- Row 7: Visibility Checkbox -->
+                        <!-- Row 7: Visibility Checkbox (Clearance Checkbox Removed) -->
                         <div class="col-12 mt-3">
                             <div class="form-check">
                                 <!-- Checkbox is bound directly to the Boolean field {isAvailable} -->
@@ -234,242 +240,23 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Client-side password matching validation
+    function validatePassword() {
+        const newPass = document.getElementById('newPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
+
+        if (newPass !== confirmPass) {
+            // Note: In a real app, replace alert() with a custom modal/error display
+            alert("Error: The new password and confirmation password do not match.");
+            return false;
+        }
+        if (newPass.length < 6) {
+            alert("Error: Password must be at least 6 characters long.");
+            return false;
+        }
+        return true;
+    }
+</script>
 </body>
 </html>
-
-
-
-<!--
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <title>Edit Product - [[${product.name}]]</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <style>
-        :root{ &#45;&#45;brand:#ff7c04; &#45;&#45;dark:#222; }
-        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
-        .navbar { background-color: var(&#45;&#45;dark) !important; }
-        .btn-brand { background-color: var(&#45;&#45;brand); border-color: var(&#45;&#45;brand); color: white; }
-        .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
-        .card-title { font-weight: 700; }
-        .preview-image { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .main-content { flex-grow: 1; }
-
-        /* -&#45;&#45; CUSTOMER NAVBAR STYLE REPLICATION FOR ADMIN (FIX) -&#45;&#45; */
-        .admin-nav .nav-link{
-            color: #fff;
-            padding-bottom: 8px;
-            transition: color 0.2s, border-bottom 0.2s;
-        }
-        .admin-nav .nav-link:hover,
-        .admin-nav .nav-link.active {
-            color: var(&#45;&#45;brand);
-            font-weight: 500;
-            border-bottom: 2px solid var(&#45;&#45;brand);
-        }
-        .admin-nav .nav-item { margin: 0 10px; }
-        /* -&#45;&#45; END FIX -&#45;&#45; */
-
-        /* Footer consistency */
-        footer { background-color: var(&#45;&#45;dark); color: #fff; margin-top: auto; padding: 15px 0; }
-    </style>
-</head>
-<body>
-
-&lt;!&ndash; ADMIN NAVBAR &ndash;&gt;
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-        &lt;!&ndash; Logo and Brand Name &ndash;&gt;
-        <a class="navbar-brand ms-3 d-flex align-items-center" href="/admin/dashboard">
-            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:40px; margin-right:8px;">
-            <span class="text-white">Anvi Studio Admin</span>
-        </a>
-
-        &lt;!&ndash; Admin Navigation Links (Matching index.html style) &ndash;&gt;
-        <div class="d-flex align-items-center collapse navbar-collapse" id="adminNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 admin-nav">
-
-                &lt;!&ndash; Product Management (ACTIVE) &ndash;&gt;
-                <li class="nav-item">
-                    <a th:href="@{/admin/dashboard}" class="nav-link active">
-                        <i class="fa fa-boxes-stacked me-1"></i> Product Management
-                    </a>
-                </li>
-
-                &lt;!&ndash; Contact Messages &ndash;&gt;
-                <li class="nav-item">
-                    <a th:href="@{/admin/contacts}" class="nav-link">
-                        <i class="fa fa-envelope me-1"></i> Contact Messages
-                    </a>
-                </li>
-
-                &lt;!&ndash; Profile &ndash;&gt;
-                <li class="nav-item">
-                    <a th:href="@{/admin/profile}" class="nav-link">
-                        <i class="fa fa-user-cog me-1"></i> Profile: <span sec:authentication="name">Admin</span>
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-
-        &lt;!&ndash; Logout Button &ndash;&gt;
-        <div class="d-flex">
-            <form th:action="@{/logout}" method="post">
-                <button type="submit" class="btn btn-danger btn-sm me-3">Logout</button>
-            </form>
-        </div>
-    </div>
-</nav>
-
-<div class="main-content container mt-5">
-    <h2 class="mb-4 text-dark">Edit Product: <span th:text="${product.name}"></span></h2>
-
-    <div class="card shadow mb-5 p-4">
-        <h4 class="card-title mb-4">Product Details (ID: <span th:text="${product.id}"></span>)</h4>
-
-        &lt;!&ndash; Form posts to the update method in AdminController &ndash;&gt;
-        <form th:action="@{/admin/product/update}" th:object="${product}" method="post">
-            &lt;!&ndash; Hidden field for the ID (CRITICAL for updating the existing record) &ndash;&gt;
-            <input type="hidden" th:field="*{id}" />
-
-            <div class="row g-3">
-
-                &lt;!&ndash; Image Preview Column &ndash;&gt;
-                <div class="col-md-4">
-                    <h5 class="mb-3">Image Preview</h5>
-                    <img th:src="${product.imageUrl != null ? product.imageUrl : 'https://placehold.co/300x300/ccc/333?text=No+Image'}"
-                         onerror="this.onerror=null; this.src='https://placehold.co/300x300/ccc/333?text=Error+Loading';"
-                         id="imagePreview"
-                         class="preview-image"
-                         alt="Product Image Preview">
-                </div>
-
-                &lt;!&ndash; Details Column &ndash;&gt;
-                <div class="col-md-8">
-                    <div class="row g-3">
-
-                        &lt;!&ndash; Row 1: Core Identification &ndash;&gt;
-                        <div class="col-md-6">
-                            <label for="name" class="form-label">Product Name</label>
-                            <input type="text" th:field="*{name}" class="form-control" id="name" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="category" class="form-label">Category</label>
-                            <select th:field="*{category}" class="form-select" id="category" required>
-                                <option value="" disabled>Select Category</option>
-                                <option th:each="cat : ${allCategories}"
-                                        th:value="${cat}"
-                                        th:text="${cat}">Category Name</option>
-                            </select>
-                        </div>
-
-                        &lt;!&ndash; NEW FIELD: SKU &ndash;&gt;
-                        <div class="col-md-6">
-                            <label for="sku" class="form-label">SKU (Model #)</label>
-                            <input type="text" th:field="*{sku}" class="form-control" id="sku" placeholder="e.g., LEH2024-5">
-                        </div>
-
-                        &lt;!&ndash; Row 2: Pricing and Inventory &ndash;&gt;
-                        <div class="col-md-6">
-                            <label for="price" class="form-label">Price (₹)</label>
-                            <input type="number" th:field="*{price}" class="form-control" id="price" step="0.01" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="stockQuantity" class="form-label">Stock Quantity</label>
-                            <input type="number" th:field="*{stockQuantity}" class="form-control" id="stockQuantity" required>
-                        </div>
-
-                        &lt;!&ndash; Row 3: Image URL &ndash;&gt;
-                        <div class="col-md-6">
-                            <label for="imageUrl" class="form-label">Image URL</label>
-                            <input type="text" th:field="*{imageUrl}" class="form-control" id="imageUrl" placeholder="/images/product.jpg"
-                                   oninput="document.getElementById('imagePreview').src = this.value || 'https://placehold.co/300x300/ccc/333?text=No+Image';">
-                        </div>
-
-                        &lt;!&ndash; Row 4: Short Description &ndash;&gt;
-                        <div class="col-12">
-                            <label for="description" class="form-label">Short Description</label>
-                            <textarea th:field="*{description}" class="form-control" id="description" rows="3" required></textarea>
-                        </div>
-
-                        &lt;!&ndash; Row 5: Size and Delivery &ndash;&gt;
-                        <div class="col-md-6">
-                            <label for="sizeOptions" class="form-label">Size Options (Comma Separated)</label>
-                            <input type="text" th:field="*{sizeOptions}" class="form-control" id="sizeOptions" placeholder="e.g., S, M, L, XL or Free Size">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="sizeGuideUrl" class="form-label">Size Guide URL (Optional)</label>
-                            <input type="text" th:field="*{sizeGuideUrl}" class="form-control" id="sizeGuideUrl" placeholder="/images/size-chart.png">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="estimatedDelivery" class="form-label">Estimated Delivery Time</label>
-                            <input type="text" th:field="*{estimatedDelivery}" class="form-control" id="estimatedDelivery" placeholder="e.g., 4-6 Business Days">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="productTags" class="form-label">Product Tags (SEO/Related)</label>
-                            <input type="text" th:field="*{productTags}" class="form-control" id="productTags" placeholder="e.g., silk, party wear, green, lehenga">
-                        </div>
-
-                        &lt;!&ndash; Row 6: Long Text Policies &ndash;&gt;
-                        <div class="col-12">
-                            <label for="additionalInformation" class="form-label">Additional Information (Fabric Details, Wash Care)</label>
-                            <textarea th:field="*{additionalInformation}" class="form-control" id="additionalInformation" rows="3" placeholder="Detailed fabric composition, wash instructions, internal components..."></textarea>
-                        </div>
-
-                        <div class="col-12">
-                            <label for="deliveryAndReturnPolicy" class="form-label">Delivery and Return Policy (Specific for Product)</label>
-                            <textarea th:field="*{deliveryAndReturnPolicy}" class="form-control" id="deliveryAndReturnPolicy" rows="2" placeholder="Example: 7-day exchange only on damaged goods."></textarea>
-                        </div>
-
-                        &lt;!&ndash; Row 7: Visibility Checkbox &ndash;&gt;
-                        <div class="col-12 mt-3">
-                            <div class="form-check">
-                                &lt;!&ndash; Checkbox is bound directly to the Boolean field {isAvailable} &ndash;&gt;
-                                <input class="form-check-input" type="checkbox" th:field="*{isAvailable}" id="isAvailable">
-                                <label class="form-check-label" for="isAvailable">
-                                    Product is currently available for purchase (Visible to customers)
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="col-12 mt-4">
-                            <button type="submit" class="btn btn-brand w-100">
-                                <i class="fa fa-save me-2"></i> Save Product Updates
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <a th:href="@{/admin/dashboard}" class="btn btn-secondary"><i class="fa fa-arrow-left me-2"></i> Back to Dashboard</a>
-</div>
-
-&lt;!&ndash; FOOTER &ndash;&gt;
-<footer class="py-4" style="background-color:var(&#45;&#45;dark); color:#fff;">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <h5 class="mb-1">Anvi Studio Admin</h5>
-                <p class="small text-muted mb-0">Product and Content Management Portal</p>
-            </div>
-            <div class="col-md-6 text-md-end">
-                <p class="small mb-0">Version 1.0 &copy; 2025. All Rights Reserved.</p>
-            </div>
-        </div>
-    </div>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>-->

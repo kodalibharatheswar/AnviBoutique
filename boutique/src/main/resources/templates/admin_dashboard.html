@@ -60,6 +60,10 @@
         .inventory-table th { color: white; font-weight: 400; }
         .inventory-table td { vertical-align: middle; }
         .modal-header, .modal-footer { border: none; }
+        /* Style for price discount visualization */
+        .original-price { text-decoration: line-through; color: #888; font-size: 0.85em; margin-right: 5px; }
+        .discount-badge { font-size: 0.7em; margin-left: 5px; }
+        .clearance-tag { color: red; font-weight: bold; font-size: 0.8em;}
     </style>
 </head>
 <body>
@@ -149,15 +153,22 @@
                 </div>
 
                 <!-- Row 2: Pricing and Inventory -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="price" class="form-label">Price (₹)</label>
                     <input type="number" th:field="*{price}" class="form-control" id="price" step="0.01" required>
                 </div>
-                <div class="col-md-4">
+
+                <!-- Discount Percentage -->
+                <div class="col-md-3">
+                    <label for="discountPercent" class="form-label">Discount (%)</label>
+                    <input type="number" th:field="*{discountPercent}" class="form-control" id="discountPercent" min="0" max="100" value="0">
+                </div>
+
+                <div class="col-md-3">
                     <label for="stockQuantity" class="form-label">Stock Quantity</label>
                     <input type="number" th:field="*{stockQuantity}" class="form-control" id="stockQuantity" required>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="imageUrl" class="form-label">Image URL</label>
                     <input type="text" th:field="*{imageUrl}" class="form-control" id="imageUrl" placeholder="/images/product.jpg">
                 </div>
@@ -201,12 +212,12 @@
                     <textarea th:field="*{deliveryAndReturnPolicy}" class="form-control" id="deliveryAndReturnPolicy" rows="2" placeholder="Example: 7-day exchange only on damaged goods."></textarea>
                 </div>
 
-                <!-- Row 6: Visibility Checkbox -->
-                <div class="col-12 mt-3">
+                <!-- Row 6: Visibility Checkbox (Clearance Checkbox Removed) -->
+                <div class="col-12 mt-3 d-flex gap-4">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" th:field="*{isAvailable}" id="isAvailable" checked>
                         <label class="form-check-label" for="isAvailable">
-                            Product is currently available for purchase (Visible to customers)
+                            Product is currently available (Visible)
                         </label>
                     </div>
                 </div>
@@ -221,7 +232,7 @@
         </form>
     </div>
 
-    <!-- Product Inventory Table (Unchanged) -->
+    <!-- Product Inventory Table (UPDATED to show Discount) -->
 
     <!-- Filter Section -->
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -252,11 +263,12 @@
             <tr>
                 <th>#</th>
                 <th>Image</th>
-                <th>Name / SKU</th> <!-- UPDATED COLUMN HEADER -->
+                <th>Name / SKU</th>
                 <th>Category</th>
-                <th>Price</th>
+                <th>Price / Discount</th>
+                <th>Sale Status</th> <!-- NEW COLUMN HEADER -->
                 <th>Stock</th>
-                <th>Color</th> <!-- NEW COLUMN HEADER -->
+                <th>Color</th>
                 <th>Available</th>
                 <th>Actions</th>
             </tr>
@@ -276,7 +288,31 @@
                     <small class="text-muted" th:text="${product.sku}">SKU</small>
                 </td>
                 <td th:text="${product.category}">Sarees</td>
-                <td>₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">3500.00</span></td>
+                <!-- PRICE DISPLAY LOGIC -->
+                <td>
+                    <span th:if="${product.discountPercent > 0}" class="d-block">
+                        <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">3500.00</span></span>
+                        <span class="badge bg-danger discount-badge" th:text="'-' + ${product.discountPercent} + '%'">-10%</span>
+                        <br>
+                        ₹ <span class="fw-bold text-success" th:text="${#numbers.formatDecimal(product.discountedPrice, 0, 'COMMA', 2, 'POINT')}">3150.00</span>
+                    </span>
+                    <span th:unless="${product.discountPercent > 0}">
+                        ₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">3500.00</span>
+                    </span>
+                </td>
+                <!-- NEW: Clearance Status Tag -->
+                <td>
+                    <span th:if="${product.isClearance()}" class="clearance-tag">
+                        <i class="fa fa-fire"></i> CLEARANCE
+                    </span>
+                    <span th:unless="${product.isClearance() or product.discountPercent == 0}">
+                        <i class="fa fa-tag text-warning"></i> SALE
+                    </span>
+                    <span th:if="${product.discountPercent == 0}" class="text-muted small">
+                        None
+                    </span>
+                </td>
+
                 <td th:text="${product.stockQuantity}">10</td>
                 <!-- NEW: Color Display -->
                 <td th:text="${product.productColor ?: 'N/A'}">Color</td>
@@ -300,7 +336,7 @@
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(products)}">
-                <td colspan="9" class="text-center">No products found in the inventory for this category.</td>
+                <td colspan="10" class="text-center">No products found in the inventory for this category.</td>
             </tr>
             </tbody>
         </table>
@@ -378,378 +414,3 @@
 </script>
 </body>
 </html>
-
-<!--
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <title>Admin Dashboard - Product Management</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <style>
-        :root{ &#45;&#45;brand:#ff7c04; &#45;&#45;dark:#222; }
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f7f7f7;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .main-content {
-            flex-grow: 1;
-        }
-
-        /* UPDATED NAVBAR STYLES - Matching index.html */
-        .navbar { background-color: var(&#45;&#45;dark) !important; }
-
-        /* Base link styles - all links visible in white */
-        .admin-nav .nav-link{
-            color: #fff;
-            padding-bottom: 8px;
-            transition: color 0.2s, border-bottom 0.2s;
-        }
-        /* Hover/Active link with underline (matching index.html) */
-        .admin-nav .nav-link:hover,
-        .admin-nav .nav-link.active {
-            color: var(&#45;&#45;brand);
-            font-weight: 500;
-            border-bottom: 2px solid var(&#45;&#45;brand);
-        }
-        .admin-nav .nav-item { margin: 0 10px; }
-
-        .btn-brand { background-color: var(&#45;&#45;brand); border-color: var(&#45;&#45;brand); color: white; }
-        .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
-
-        /* Enhanced Admin Titles */
-        .admin-title {
-            font-family: 'Playfair Display', serif;
-            font-weight: 700;
-            color: var(&#45;&#45;dark);
-        }
-        .card-title { font-weight: 700; }
-        .product-image-thumb {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 4px;
-            margin-right: 10px;
-        }
-
-        /* Table Styling */
-        .inventory-table thead { background-color: var(&#45;&#45;dark); }
-        .inventory-table th { color: white; font-weight: 400; }
-        .inventory-table td { vertical-align: middle; }
-        .modal-header, .modal-footer { border: none; }
-    </style>
-</head>
-<body>
-
-&lt;!&ndash; ADMIN NAVBAR &ndash;&gt;
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-        &lt;!&ndash; Logo and Brand Name &ndash;&gt;
-        <a class="navbar-brand ms-3 d-flex align-items-center" href="/admin/dashboard">
-            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:40px; margin-right:8px;">
-            <span class="text-white">Anvi Studio Admin</span>
-        </a>
-
-        &lt;!&ndash; Admin Navigation Links (Matching index.html style) &ndash;&gt;
-        <div class="d-flex align-items-center collapse navbar-collapse" id="adminNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 admin-nav">
-
-                &lt;!&ndash; Product Management (ACTIVE) &ndash;&gt;
-                <li class="nav-item">
-                    <a th:href="@{/admin/dashboard}" class="nav-link active">
-                        <i class="fa fa-boxes-stacked me-1"></i> Product Management
-                    </a>
-                </li>
-
-                &lt;!&ndash; Contact Messages &ndash;&gt;
-                <li class="nav-item">
-                    <a th:href="@{/admin/contacts}" class="nav-link">
-                        <i class="fa fa-envelope me-1"></i> Contact Messages
-                    </a>
-                </li>
-
-                &lt;!&ndash; Profile &ndash;&gt;
-                <li class="nav-item">
-                    <a th:href="@{/admin/profile}" class="nav-link">
-                        <i class="fa fa-user-cog me-1"></i> Profile: <span sec:authentication="name">Admin</span>
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-
-        &lt;!&ndash; Logout Button &ndash;&gt;
-        <div class="d-flex">
-            <form th:action="@{/logout}" method="post">
-                <button type="submit" class="btn btn-danger btn-sm me-3">Logout</button>
-            </form>
-        </div>
-    </div>
-</nav>
-
-&lt;!&ndash; MAIN CONTENT WRAPPER &ndash;&gt;
-<div class="main-content container mt-5">
-
-    <h2 class="mb-4 admin-title display-6">Product Inventory Management</h2>
-
-    &lt;!&ndash; Success/Error Message after product action &ndash;&gt;
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${successMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${errorMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-
-    &lt;!&ndash; Product Adding Form (Card) &ndash;&gt;
-    <div class="card shadow mb-5 p-4">
-        <h4 class="card-title mb-4">Add New Product</h4>
-        <form th:action="@{/admin/addProduct}" th:object="${newProduct}" method="post">
-            <div class="row g-3">
-
-                &lt;!&ndash; Row 1: Core Identification &ndash;&gt;
-                <div class="col-md-4">
-                    <label for="name" class="form-label">Product Name</label>
-                    <input type="text" th:field="*{name}" class="form-control" id="name" required>
-                </div>
-                <div class="col-md-4">
-                    <label for="category" class="form-label">Category</label>
-                    <select th:field="*{category}" class="form-select" id="category" required>
-                        <option value="" disabled selected>Select Category</option>
-                        <option th:each="cat : ${allCategories}" th:value="${cat}" th:text="${cat}">Category Name</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="sku" class="form-label">SKU (Model #)</label>
-                    <input type="text" th:field="*{sku}" class="form-control" id="sku" placeholder="e.g., LEH2024-5">
-                </div>
-
-                &lt;!&ndash; Row 2: Pricing and Inventory &ndash;&gt;
-                <div class="col-md-4">
-                    <label for="price" class="form-label">Price (₹)</label>
-                    <input type="number" th:field="*{price}" class="form-control" id="price" step="0.01" required>
-                </div>
-                <div class="col-md-4">
-                    <label for="stockQuantity" class="form-label">Stock Quantity</label>
-                    <input type="number" th:field="*{stockQuantity}" class="form-control" id="stockQuantity" required>
-                </div>
-                <div class="col-md-4">
-                    <label for="imageUrl" class="form-label">Image URL</label>
-                    <input type="text" th:field="*{imageUrl}" class="form-control" id="imageUrl" placeholder="/images/product.jpg">
-                </div>
-
-                &lt;!&ndash; Row 3: Product Description &ndash;&gt;
-                <div class="col-12">
-                    <label for="description" class="form-label">Short Description</label>
-                    <textarea th:field="*{description}" class="form-control" id="description" rows="3" required></textarea>
-                </div>
-
-                &lt;!&ndash; Row 4: Attributes and Delivery &ndash;&gt;
-                <div class="col-md-6">
-                    <label for="sizeOptions" class="form-label">Size Options (Comma Separated)</label>
-                    <input type="text" th:field="*{sizeOptions}" class="form-control" id="sizeOptions" placeholder="e.g., S, M, L, XL or Free Size">
-                </div>
-                <div class="col-md-6">
-                    <label for="sizeGuideUrl" class="form-label">Size Guide URL (Optional)</label>
-                    <input type="text" th:field="*{sizeGuideUrl}" class="form-control" id="sizeGuideUrl" placeholder="/images/size-chart.png">
-                </div>
-
-                <div class="col-md-6">
-                    <label for="estimatedDelivery" class="form-label">Estimated Delivery Time</label>
-                    <input type="text" th:field="*{estimatedDelivery}" class="form-control" id="estimatedDelivery" placeholder="e.g., 4-6 Business Days">
-                </div>
-                <div class="col-md-6">
-                    <label for="productTags" class="form-label">Product Tags (SEO/Related)</label>
-                    <input type="text" th:field="*{productTags}" class="form-control" id="productTags" placeholder="e.g., silk, party wear, green, lehenga">
-                </div>
-
-                &lt;!&ndash; Row 5: Long Text Policies &ndash;&gt;
-                <div class="col-12">
-                    <label for="additionalInformation" class="form-label">Additional Information (Fabric Details, Wash Care)</label>
-                    <textarea th:field="*{additionalInformation}" class="form-control" id="additionalInformation" rows="3" placeholder="Detailed fabric composition, wash instructions, internal components..."></textarea>
-                </div>
-                <div class="col-12">
-                    <label for="deliveryAndReturnPolicy" class="form-label">Delivery and Return Policy (Specific for Product)</label>
-                    <textarea th:field="*{deliveryAndReturnPolicy}" class="form-control" id="deliveryAndReturnPolicy" rows="2" placeholder="Example: 7-day exchange only on damaged goods."></textarea>
-                </div>
-
-                &lt;!&ndash; Row 6: Visibility Checkbox &ndash;&gt;
-                <div class="col-12 mt-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" th:field="*{isAvailable}" id="isAvailable" checked>
-                        <label class="form-check-label" for="isAvailable">
-                            Product is currently available for purchase (Visible to customers)
-                        </label>
-                    </div>
-                </div>
-
-
-                <div class="col-12 mt-4">
-                    <button type="submit" class="btn btn-brand w-100">
-                        <i class="fa fa-plus me-2"></i> Add Product
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    &lt;!&ndash; Product Inventory Table (Unchanged) &ndash;&gt;
-
-    &lt;!&ndash; Filter Section &ndash;&gt;
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        &lt;!&ndash; Dynamic Header &ndash;&gt;
-        <h4 class="mb-0 admin-title fs-5">Inventory:
-            <span th:text="${currentCategory != null ? currentCategory : 'All Categories'}">All Categories</span>
-        </h4>
-
-        &lt;!&ndash; Category Filter Dropdown &ndash;&gt;
-        <form th:action="@{/admin/dashboard}" method="get" class="d-flex align-items-center">
-            <label for="categoryFilter" class="form-label me-2 mb-0 small">Filter By:</label>
-            <select name="category" id="categoryFilter" class="form-select form-select-sm" onchange="this.form.submit()">
-                &lt;!&ndash; Option to view all &ndash;&gt;
-                <option value="">All Categories</option>
-                &lt;!&ndash; Loop through all available categories &ndash;&gt;
-                <option th:each="cat : ${allCategories}"
-                        th:value="${cat}"
-                        th:text="${cat}"
-                        th:selected="${cat == currentCategory}">Category Name
-                </option>
-            </select>
-        </form>
-    </div>
-
-    <div class="table-responsive shadow-sm bg-white rounded mb-5">
-        <table class="table table-striped table-hover inventory-table mb-0">
-            <thead>
-            <tr>
-                <th>#</th>
-                <th>Image</th>
-                <th>Name / SKU</th> &lt;!&ndash; UPDATED COLUMN HEADER &ndash;&gt;
-                <th>Category</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Available</th> &lt;!&ndash; UPDATED COLUMN HEADER &ndash;&gt;
-                <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="product, stat : ${products}">
-                <td th:text="${stat.count}">1</td>
-                <td>
-                    <img th:src="${product.imageUrl != null ? product.imageUrl : 'https://placehold.co/50x50/ccc/333?text=N/A'}"
-                         onerror="this.onerror=null; this.src='https://placehold.co/50x50/ccc/333?text=Err';"
-                         class="product-image-thumb"
-                         alt="Product Image">
-                </td>
-                <td>
-                    <span th:text="${product.name}">Product Name</span>
-                    <br>
-                    <small class="text-muted" th:text="${product.sku}">SKU</small>
-                </td>
-                <td th:text="${product.category}">Sarees</td>
-                <td>₹ <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}">3500.00</span></td>
-                <td th:text="${product.stockQuantity}">10</td>
-                &lt;!&ndash; NEW: Availability Status &ndash;&gt;
-                <td>
-                    <i class="fa" th:classappend="${product.isAvailable} ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'"></i>
-                </td>
-                <td class="d-flex gap-2">
-                    &lt;!&ndash; 1. Edit Link &ndash;&gt;
-                    <a th:href="@{/admin/product/edit/{id}(id=${product.id})}" class="btn btn-warning btn-sm">
-                        <i class="fa fa-edit"></i> Edit
-                    </a>
-                    &lt;!&ndash; 2. Delete Button (Triggers custom modal) &ndash;&gt;
-                    <button type="button"
-                            class="btn btn-danger btn-sm"
-                            data-bs-toggle="modal"
-                            data-bs-target="#confirmDeleteModal"
-                            th:attr="data-product-id=${product.id}, data-product-name=${product.name}">
-                        <i class="fa fa-trash"></i> Delete
-                    </button>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(products)}">
-                <td colspan="7" class="text-center">No products found in the inventory for this category.</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-&lt;!&ndash; END MAIN CONTENT WRAPPER &ndash;&gt;
-
-&lt;!&ndash; Confirmation Delete Modal (Custom UI Replacement for confirm()) &ndash;&gt;
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="modalProductName"></strong>?</p>
-                <div class="alert alert-warning small">
-                    <i class="fa fa-exclamation-triangle me-1"></i>
-                    **Warning:** This action is permanent and will remove the product from all customer carts and wishlists.
-                </div>
-                <p class="text-muted small">Product ID: <span id="modalProductId"></span></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post">
-                    &lt;!&ndash; The action URL will be set by JavaScript &ndash;&gt;
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fa fa-trash me-1"></i> Yes, Delete Permanently
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-&lt;!&ndash; FOOTER &ndash;&gt;
-<footer class="py-4" style="background-color:var(&#45;&#45;dark); color:#fff; margin-top: auto;">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <h5 class="mb-1">Anvi Studio Admin</h5>
-                <p class="small text-muted mb-0">Product and Content Management Portal</p>
-            </div>
-            <div class="col-md-6 text-md-end">
-                <p class="small mb-0">Version 1.0 &copy; 2025. All Rights Reserved.</p>
-            </div>
-        </div>
-    </div>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const deleteModal = document.getElementById('confirmDeleteModal');
-        const deleteForm = document.getElementById('deleteForm');
-
-        // Listen for when the modal is about to be shown
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            // Button that triggered the modal
-            const button = event.relatedTarget;
-
-            // Extract info from data-* attributes
-            const productId = button.getAttribute('data-product-id');
-            const productName = button.getAttribute('data-product-name');
-
-            // Update the modal's content
-            document.getElementById('modalProductId').textContent = productId;
-            document.getElementById('modalProductName').textContent = productName;
-
-            // Set the form action dynamically
-            deleteForm.action = `/admin/product/delete/${productId}`;
-        });
-    });
-</script>
-</body>
-</html>-->

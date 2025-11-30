@@ -43,19 +43,5 @@ public class CustomerController {
     public String customerDashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
 
         return "redirect:/";
-        /*
-        Optional<Customer> customerOptional = userService.getCustomerDetailsByUsername(userDetails.getUsername());
-
-        if (customerOptional.isPresent()) {
-            model.addAttribute("customer", customerOptional.get());
-        } else {
-            model.addAttribute("username", userDetails.getUsername());
-        }
-
-        // Fetch products that the customer can browse
-        model.addAttribute("products", productService.getDisplayableProducts());
-
-        return "customer_dashboard"; // Maps to src/main/resources/templates/customer_dashboard.html
-         */
     }
 }

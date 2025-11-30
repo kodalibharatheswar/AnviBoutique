@@ -52,92 +52,9 @@
 </head>
 <body>
 
-<!-- Offer bar -->
-<div class="offer-bar text-center" style="background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0;">
-    <div class="container">Free Shipping on Orders Above ₹1999 – Use code <a href="#" style="color:var(--brand); text-decoration:none; font-weight:600;">FREESHIP</a></div>
-</div>
-
-<!-- NAVBAR - FIXED VERSION -->
-<nav class="navbar navbar-expand-lg main-nav">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;">
-            <span class="text-white">Anvi Studio</span>
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="mainNav">
-            <!-- MAIN LINKS -->
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <!-- *** NEW ARRIVALS TAB *** -->
-                <li class="nav-item"><a class="nav-link" th:href="@{/products(sort='newest')}">New Arrivals</a></li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown">Shop</a>
-                    <ul class="dropdown-menu" aria-labelledby="shopDropdown">
-                        <!-- START: EXPANDED CATEGORY LIST -->
-                        <li><a class="dropdown-item" th:href="@{/products(category='Long Frocks')}">Long Frocks</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Lehengas')}">Lehengas</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Mom & Me')}">Mom & Me</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Crop Top – Skirts')}">Crop Top – Skirts</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Handlooms')}">Handlooms</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Casual Frocks')}">Casual Frocks</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Ready To Wear')}">Ready To Wear</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Dupattas')}">Dupattas</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Kids wear')}">Kids wear</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Dress Material')}">Dress Material</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Sarees')}">Sarees</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Blouses')}">Blouses</a></li>
-                        <li><a class="dropdown-item" th:href="@{/products(category='Fabrics')}">Fabrics</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <!-- END: EXPANDED CATEGORY LIST -->
-                        <li><a class="dropdown-item" th:href="@{/products}">All Products</a></li>
-                    </ul>
-                </li>
-                <!-- ABOUT - ACTIVE ON ABOUT.HTML -->
-                <li class="nav-item"><a class="nav-link active" aria-current="page" href="/about">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
-            </ul>
-
-            <!-- NAVIGATION ICONS (Pushed to the far right) - SINGLE SET ONLY -->
-            <ul class="navbar-nav  mb-2 mb-lg-0">
-
-                <!-- 1. LOGIN/WELCOME ICON -->
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/login}" sec:authorize="!isAuthenticated()">
-                        <i class="fa fa-user"></i>
-                    </a>
-                </li>
-
-                <!-- USER NAME - Only when authenticated -->
-                <li class="nav-item" sec:authorize="isAuthenticated()">
-                    <span class="nav-link text-white"><i class="fa fa-user me-1"></i><span sec:authentication="name">User</span></span>
-                </li>
-
-                <!-- 2. WISHLIST ICON -->
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/wishlist-unauth}" sec:authorize="!isAuthenticated()"><i class="fa-regular fa-heart"></i></a>
-                    <a class="nav-link" th:href="@{/wishlist}" sec:authorize="isAuthenticated()"><i class="fa-regular fa-heart"></i></a>
-                </li>
-
-                <!-- 3. CART ICON -->
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/cart-unauth}" sec:authorize="!isAuthenticated()"><i class="fa fa-shopping-cart"></i></a>
-                    <a class="nav-link" th:href="@{/cart}" sec:authorize="isAuthenticated()"><i class="fa fa-shopping-cart"></i></a>
-                </li>
-
-                <!-- LOGOUT BUTTON - Only when authenticated -->
-                <li class="nav-item" sec:authorize="isAuthenticated()">
-                    <form th:action="@{/logout}" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                    </form>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
+<!-- INCLUDE REUSABLE NAVBAR FRAGMENT -->
+<!-- We pass the 'currentPage' variable to highlight the active link in the navbar -->
+<div th:insert="~{navbar.html :: main-navbar(currentPage='home')}"></div>
 
 <!-- ABOUT HERO SECTION -->
 <section class="py-5 text-center" style="background-color: #f0f0f0;">
@@ -210,18 +127,8 @@
     </div>
 </section>
 
-
-<!-- FOOTER (Standardized structure) -->
-<footer class="py-5" style="background-color:var(--dark); color:#fff;">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-3"><h5>Anvi Studio</h5><p class="small">Handpicked ethnic wear for every occasion.</p></div>
-            <div class="col-md-2 mb-3"><h6>Shop</h6><ul class="list-unstyled small"><li><a th:href="@{/products(category='Sarees')}" class="text-white">Sarees</a></li><li><a th:href="@{/products(category='Lehengas')}" class="text-white">Lehengas</a></li></ul></div>
-            <div class="col-md-3 mb-3"><h6>Contact</h6><p class="small">Vijayawada, India<br><a href="mailto:avnistudio@gmail.com" class="text-white">avnistudio@gmail.com</a></p></div>
-            <div class="col-md-3 mb-3"><h6>Follow</h6><p><a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a><a href="#" class="text-white"><i class="fab fa-facebook"></i></a></p></div>
-        </div>
-    </div>
-</footer>
+<!-- Include the centralized footer fragment -->
+<div th:replace="~{footer.html :: footer}"></div>
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

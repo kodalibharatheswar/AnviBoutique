@@ -1,0 +1,113 @@
+<div xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+    <!-- FOOTER (Structured for Brand Presence and Link Organization) -->
+    <footer class="py-5" style="background-color:var(--dark); color:#fff; font-size: 0.95rem;">
+        <div class="container">
+            <div class="row g-4">
+
+                <!-- Column 1: Brand Info & Tagline (Left Side Focus) -->
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <!-- Company Logo and Title -->
+                    <h5 class="fw-bold mb-2 d-flex align-items-center">
+                        <!-- Use a small version of the logo if available, or just the text -->
+                        <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:75px; margin-right:4px;<!-- filter: grayscale(100%) invert(100%);-->">
+                        Anvi Studio
+                    </h5>
+                    <p class="small text-white-50">
+                        Handpicked ethnic wear for every occasion.
+                    </p>
+
+                    <!-- Newsletter Subscription -->
+                    <h6 class="fw-bold mt-4 mb-3">Newsletter</h6>
+                    <p class="small text-white-50">Subscribe to receive updates, access to exclusive deals, and more.</p>
+                    <form action="#" method="post" class="d-flex flex-column">
+                        <input type="email" placeholder="Your Email ID" class="form-control form-control-sm mb-2" required>
+                        <button type="submit" class="btn btn-sm btn-outline-light">Subscribe</button>
+                    </form>
+                </div>
+
+                <!-- Column 2: Useful Links & Customization -->
+                <div class="col-lg-2 col-md-6 mb-3">
+                    <h6 class="fw-bold mb-3">Useful Links</h6>
+                    <ul class="list-unstyled">
+                        <li><a th:href="@{/}" class="text-white text-decoration-none py-1 d-block">Home</a></li>
+                       <!-- <li><a th:href="@{/products}" class="text-white text-decoration-none py-1 d-block">All Categories</a></li>-->
+                        <!-- SHOP DROPDOWN -->
+                        <!--<li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="shopDropdown" role="button" data-bs-toggle="dropdown" th:classappend="${currentPage == 'shop' ? 'active' : ''}">Shop</a>
+                            <ul class="dropdown-menu" aria-labelledby="shopDropdown">
+                                <li><a class="dropdown-item" th:href="@{/products(category='Long Frocks')}">Long Frocks</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Lehengas')}">Lehengas</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Mom & Me')}">Mom & Me</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Crop Top – Skirts')}">Crop Top – Skirts</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Handlooms')}">Handlooms</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Casual Frocks')}">Casual Frocks</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Ready To Wear')}">Ready To Wear</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Dupattas')}">Dupattas</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Kids wear')}">Kids wear</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Dress Material')}">Dress Material</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Sarees')}">Sarees</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Blouses')}">Blouses</a></li>
+                                <li><a class="dropdown-item" th:href="@{/products(category='Fabrics')}">Fabrics</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" th:href="@{/products}">All Products</a></li>
+                            </ul>
+                        </li>-->
+                        <li><a th:href="@{/products}" class="text-white text-decoration-none py-1 d-block">All Products</a></li>
+                        <li><a th:href="@{/products(status='onSale')}" class="text-white text-decoration-none py-1 d-block">Offers</a></li>
+                        <li><a th:href="@{/about}" class="text-white text-decoration-none py-1 d-block">About</a></li>
+                        <li><a th:href="@{/contact}" class="text-white text-decoration-none py-1 d-block">Contact</a></li>
+                        <li><a th:href="@{/images/sizechart.jpg}" target="_blank" class="text-white text-decoration-none py-1 d-block">Measurement Guide</a></li>
+                        <!-- NEW LINK for Custom Request -->
+                        <li><a th:href="@{/custom-request}" class="text-white text-decoration-none py-1 d-block fw-bold"><!--style="color: var(&#45;&#45;brand) !important;"-->Customization Request</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: My Account & Policies -->
+                <div class="col-lg-2 col-md-6 mb-3">
+                    <h6 class="fw-bold mb-3">My Account</h6>
+                    <ul class="list-unstyled">
+                        <li sec:authorize="!isAuthenticated()"><a th:href="@{/login}" class="text-white text-decoration-none py-1 d-block">Login</a></li>
+                        <li sec:authorize="isAuthenticated()"><a th:href="@{/customer/profile}" class="text-white text-decoration-none py-1 d-block">My Account</a></li>
+                        <li><a th:href="@{/customer/history}" class="text-white text-decoration-none py-1 d-block">Purchase History</a></li>
+                        <li><a th:href="@{/wishlist}" class="text-white text-decoration-none py-1 d-block">My Wishlist</a></li>
+                        <li><a th:href="@{/customer/track}" class="text-white text-decoration-none py-1 d-block">Track Order</a></li>
+                    </ul>
+
+                    <h6 class="fw-bold mt-4 mb-3">Policies</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white text-decoration-none py-1 d-block">Return Policy</a></li>
+                        <li><a href="#" class="text-white text-decoration-none py-1 d-block">Privacy Policy</a></li>
+                        <li><a href="#" class="text-white text-decoration-none py-1 d-block">Terms & Conditions</a></li>
+                        <li><a href="#" class="text-white text-decoration-none py-1 d-block">Shipping Policy</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Contact Us & Follow Us -->
+                <div class="col-lg-5 col-md-6 mb-3">
+                    <h6 class="fw-bold mb-3">Contact Us</h6>
+                    <!-- Contact Info -->
+                    <p class="small text-white-50 mb-2">
+                        <i class="fas fa-map-marker-alt me-2"></i> Location: Vijayawada, India
+                    </p>
+                    <p class="small text-white-50 mb-2">
+                        <i class="fas fa-envelope me-2"></i> Email: <a href="mailto:avnistudio@gmail.com" class="text-white text-decoration-none">avnistudio@gmail.com</a>
+                    </p>
+                    <p class="small text-white-50 mb-4">
+                        <i class="fas fa-phone me-2"></i> Phone Number: +91 9490334557
+                    </p>
+
+                    <!-- Social Media -->
+                    <h6 class="fw-bold mt-4 mb-3">Follow Us</h6>
+                    <div class="d-flex fs-4">
+                        <a href="https://www.facebook.com/bharatheswar.kodali/" target="_blank" class="text-white me-3"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/avnistudio" target="_blank" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+                        <a href="https://wa.me/919490334557" target="_blank" class="text-white"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- END FOOTER -->
+</div>
+
+ 
