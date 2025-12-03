@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Account Verification Result</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root{ --brand:#ff7c04; --dark:#222; }
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f7f7f7;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .result-card {
+        max-width: 500px;
+        padding: 40px;
+        border-radius: 15px;
+        background-color: white;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    .icon-success { font-size: 4rem; color: #28a745; margin-bottom: 20px; }
+    .icon-failure { font-size: 4rem; color: #dc3545; margin-bottom: 20px; }
+    .btn-login {
+        background-color: var(--brand);
+        border-color: var(--brand);
+        color: white;
+        padding: 10px 25px;
+        border-radius: 8px;
+        transition: background-color 0.3s;
+    }
+    .btn-login:hover {
+        background-color: #cc6300;
+        border-color: #cc6300;
+    }
+  </style>
+</head>
+<body>
+
+<div class="result-card">
+  <div th:if="${verificationResult.startsWith('Verification successful')}">
+    <i class="fas fa-check-circle icon-success"></i>
+    <h1 class="h3 mb-3 fw-bold">Verification Successful!</h1>
+    <p class="text-muted mb-4" th:text="${verificationResult}"></p>
+    <a th:href="@{/login}" class="btn btn-login w-100">Proceed to Login</a>
+  </div>
+
+  <div th:unless="${verificationResult.startsWith('Verification successful')}">
+    <i class="fas fa-times-circle icon-failure"></i>
+    <h1 class="h3 mb-3 fw-bold">Verification Failed</h1>
+    <p class="text-muted mb-4" th:text="${verificationResult}"></p>
+    <a th:href="@{/login}" class="d-block mt-3 text-secondary small text-decoration-none">Return to Login</a>
+  </div>
+
+  <a th:href="@{/}" class="d-block mt-3 text-secondary small text-decoration-none">Return to Homepage</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

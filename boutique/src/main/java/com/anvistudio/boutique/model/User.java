@@ -16,6 +16,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // The username is the unique email address, set to nullable = false and unique = true
     @Column(nullable = false, unique = true)
     private String username;
 
@@ -25,4 +26,8 @@ public class User {
     // Role can be "CUSTOMER" or "ADMIN"
     @Column(nullable = false)
     private String role;
+
+    // --- NEW FIELD FOR EMAIL VERIFICATION ---
+    @Column(nullable = false)
+    private Boolean emailVerified = false;
 }

@@ -10,4 +10,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      * Finds customer details linked to a specific User ID.
      */
     Optional<Customer> findByUserId(Long userId);
+
+    /**
+     * NEW: Finds a customer by their unique phone number.
+     */
+    Optional<Customer> findByPhoneNumber(String phoneNumber);
 }

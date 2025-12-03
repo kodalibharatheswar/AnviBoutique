@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Password Reset - OTP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --brand:#ff7c04; --dark:#222; }
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f7f7f7;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .card {
+        max-width: 450px;
+        width: 90%;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+    .otp-input {
+        font-size: 1.5rem;
+        letter-spacing: 1.5rem;
+        text-align: center;
+    }
+    .btn-primary {
+        background-color: var(--brand);
+        border-color: var(--brand);
+        color: white;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="card p-4 shadow">
+  <h3 class="text-center mb-4"><i class="fa fa-key me-2"></i> OTP Validation</h3>
+
+  <p class="text-muted small text-center mb-4">
+    A reset OTP was sent to **<span th:text="${userEmail}">user@example.com</span>**. Enter it below to proceed.
+  </p>
+
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+  <form th:action="@{/reset-otp}" method="post">
+    <!-- Hidden fields for passing state -->
+    <input type="hidden" name="email" th:value="${userEmail}" required>
+
+    <div class="mb-4">
+      <label for="otp" class="form-label visually-hidden">Enter OTP</label>
+      <input type="text"
+             name="otp"
+             id="otp"
+             class="form-control otp-input"
+             maxlength="6"
+             required
+             placeholder="------">
+      <div class="form-text text-muted">Code expires in 5 minutes.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 mt-3">
+      <i class="fa fa-check-circle me-2"></i> Validate OTP
+    </button>
+  </form>
+
+  <a th:href="@{/login}" class="mt-4 d-block text-center">Back to Login</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,7 +1,9 @@
 package com.anvistudio.boutique.config;
 
+import com.anvistudio.boutique.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -9,6 +11,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler; // NEW IMPORT
+//import org.springframework.security.core.userdetails.DisabledException; // NEW IMPORT
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -20,77 +28,74 @@ public class SecurityConfig {
     }
 
     /**
-     * Defines the authentication provider explicitly, relying on method injection
-     * for UserDetailsService (UserService) and PasswordEncoder.
+     * Defines the authentication provider.
      */
     @Bean
     public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
-        // Uses the modern constructor style to link UserDetailsService
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
-        // Sets the PasswordEncoder used for hash comparison
         authProvider.setPasswordEncoder(passwordEncoder);
-
         return authProvider;
+    }
+
+    /**
+     * NEW: Custom Failure Handler to catch DisabledException (unverified user)
+     */
+    @Bean
+    public AuthenticationFailureHandler authenticationFailureHandler() {
+        return (request, response, exception) -> {
+            String redirectUrl = "/login?error";
+
+            // If the user is disabled (i.e., email not verified)
+            if (exception instanceof DisabledException) {
+                // We redirect them back to the OTP page, passing their username (email)
+                redirectUrl = "/confirm-otp?email=" + request.getParameter("username") + "&error=unverified";
+            } else if (exception.getMessage().equals("Bad credentials")) {
+                redirectUrl = "/login?error=bad_credentials";
+            }
+
+            response.sendRedirect(redirectUrl);
+        };
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF for simpler form handling during development
                 .csrf(csrf -> csrf.disable())
-                // Allows iframes (e.g., for H2 console)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
 
-                // Define authorization rules
                 .authorizeHttpRequests(authorize -> authorize
-                        // Admin Dashboard (Role-based access)
-                        // Includes new edit endpoint for admin: /admin/product/edit/{id}
-                        .requestMatchers("/admin/profile", "/admin/updateProfile").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/customer/**").hasRole("CUSTOMER")
-
-                        // Protected E-commerce Features (Require Authentication)
                         .requestMatchers("/wishlist", "/wishlist/**").authenticated()
                         .requestMatchers("/cart", "/cart/**").authenticated()
-
-                        // Public Access (Browsing must be permitted)
                         .requestMatchers(
-                                "/",
-                                "/login",
-                                "/register",
-                                "/register/success",
-                                "/about",
-                                "/contact",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
-                                "/products",            // Main catalog page
-                                "/products/**",         // Catalog/Detail pages
-                                "/wishlist-unauth",
-                                "/cart-unauth",
-                                "/custom-request"
+                                "/", "/login", "/register", "/about", "/contact",
+                                "/products", "/products/**", "/wishlist-unauth", "/cart-unauth",
+                                "/custom-request",
+                                "/confirm-otp", // MUST BE PUBLIC
+                                // NEW: Password Reset Endpoints MUST be permitted
+                                "/forgot-password",     // <--- ADDED
+                                "/reset-otp",           // <--- ADDED
+                                "/reset-password",      // <--- ADDED
+                                "/css/**", "/js/**", "/images/**"
                         ).permitAll()
-
-                        // All other requests must be authenticated
                         .anyRequest().authenticated()
                 )
-                // Configure form-based login
+
                 .formLogin(form -> form
                         .loginPage("/login")
                         .permitAll()
+                        // Use the custom failure handler
+                        .failureHandler(authenticationFailureHandler()) // NEW LINE
                         .successHandler((request, response, authentication) -> {
-                            // --- CRITICAL REDIRECTION LOGIC ---
                             if (authentication.getAuthorities().stream()
                                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-                                // Admin is correctly directed to their dedicated dashboard
                                 response.sendRedirect("/admin/dashboard");
                             } else {
-                                // Customer is directed to the main home page (which acts as their dashboard)
                                 response.sendRedirect("/");
                             }
                         })
                 )
-                // Configure logout
                 .logout(logout -> logout
                         .permitAll()
                         .logoutSuccessUrl("/")
@@ -99,4 +104,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
