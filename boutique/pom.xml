@@ -55,6 +55,12 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+		<!-- NEW: Spring Boot Starter Mail for SMTP -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 		<!-- JPA + MySQL -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
