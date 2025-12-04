@@ -77,6 +77,7 @@ public class SecurityConfig {
                                 "/forgot-password",     // <--- ADDED
                                 "/reset-otp",           // <--- ADDED
                                 "/reset-password",      // <--- ADDED
+                                "/customer/profile/verify-new-email",
                                 "/css/**", "/js/**", "/images/**"
                         ).permitAll()
                         .anyRequest().authenticated()
