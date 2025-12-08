@@ -27,7 +27,21 @@ public class User {
     @Column(nullable = false)
     private String role;
 
-    // --- NEW FIELD FOR EMAIL VERIFICATION ---
+    // --- FIELD FOR EMAIL VERIFICATION ---
     @Column(nullable = false)
     private Boolean emailVerified = false;
+
+    // --- NEW FIELD: Admin Initial Setup Flag ---
+    /**
+     * For ADMIN role only: true if the admin has changed the default hardcoded password.
+     */
+    @Column(nullable = false)
+    private Boolean credentialsUpdated = false;
+
+    // --- NEW FIELD: Recovery Phone Number (Used primarily by Admin/Fallbacks) ---
+    /**
+     * Recovery phone number (optional, used for Admin recovery or customer fallback).
+     */
+    @Column(nullable = true)
+    private String recoveryPhoneNumber;
 }

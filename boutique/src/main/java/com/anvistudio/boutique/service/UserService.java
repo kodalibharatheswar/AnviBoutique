@@ -8,6 +8,7 @@ import com.anvistudio.boutique.repository.CustomerRepository;
 import com.anvistudio.boutique.repository.UserRepository;
 import com.anvistudio.boutique.repository.VerificationTokenRepository;
 import com.anvistudio.boutique.dto.RegistrationDTO;
+import jakarta.annotation.PostConstruct;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,7 +29,15 @@ import java.util.regex.Pattern;
 public class UserService implements UserDetailsService {
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("^[+]?[0-9]{10,15}$");
-    private static final Pattern PASSWORD_POLICY_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$");
+
+//    private static final Pattern PASSWORD_POLICY_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$");
+
+    // MODIFIED: Added special character validation: (?=.*[@$!%*?&])
+    private static final Pattern PASSWORD_POLICY_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$");
+
+    // Hardcoded Default Admin Credentials
+    private static final String DEFAULT_ADMIN_USERNAME = "admin";
+    private static final String DEFAULT_ADMIN_PASSWORD = "password123";
 
 
     public final UserRepository userRepository;
@@ -47,23 +56,37 @@ public class UserService implements UserDetailsService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ... (loadUserByUsername and findUserByIdentifier remain unchanged)
+    /**
+     * NEW: Ensures the default admin account exists in the database upon application startup.
+     */
+    @PostConstruct
+    @Transactional
+    public void createDefaultAdminIfNotFound() {
+        // Only proceed if the default admin user does NOT exist in the DB
+        if (userRepository.findByUsername(DEFAULT_ADMIN_USERNAME).isEmpty()) {
+            User defaultAdmin = new User();
+            defaultAdmin.setUsername(DEFAULT_ADMIN_USERNAME);
+            defaultAdmin.setPassword(passwordEncoder.encode(DEFAULT_ADMIN_PASSWORD));
+            defaultAdmin.setRole("ADMIN");
+            defaultAdmin.setEmailVerified(true);
+            defaultAdmin.setCredentialsUpdated(false); // MUST be false for initial login check
+            // Set a placeholder phone number to enable phone recovery on first login if needed
+            defaultAdmin.setRecoveryPhoneNumber("9999999999");
+            userRepository.save(defaultAdmin);
+            System.out.println("SECURITY INFO: Default admin account created in DB.");
+        }
+    }
 
+
+    /**
+     * CRITICAL REFACTOR: Now relies ONLY on the database for user details.
+     */
     @Override
     public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
 
         Optional<User> userOptional = findUserByIdentifier(identifier);
 
-        // --- 1. Handle Admin User (must still use "admin" as username/email) ---
-        if ("admin".equalsIgnoreCase(identifier) && userOptional.isEmpty()) {
-            return org.springframework.security.core.userdetails.User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("password123"))
-                    .roles("ADMIN")
-                    .disabled(false).accountExpired(false).credentialsExpired(false).accountLocked(false).build();
-        }
-
-        // --- 2. Handle Database User ---
+        // --- 1. Handle Admin or Customer Database User ---
         User user = userOptional
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
 
@@ -78,6 +101,7 @@ public class UserService implements UserDetailsService {
 
         GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole());
 
+        // Spring Security will now use the password stored in the 'user' object (the actual DB password).
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
@@ -99,7 +123,7 @@ public class UserService implements UserDetailsService {
      * Used by loadUserByUsername and Forgot Password feature.
      */
     public Optional<User> findUserByIdentifier(String identifier) {
-        // 1. Try to treat identifier as email (Username)
+        // 1. Try to treat identifier as email (User.username)
         Optional<User> userByEmail = userRepository.findByUsername(identifier);
         if (userByEmail.isPresent()) {
             return userByEmail;
@@ -107,33 +131,75 @@ public class UserService implements UserDetailsService {
 
         // 2. If not found by email, check if it matches phone pattern
         if (PHONE_PATTERN.matcher(identifier).matches()) {
-            // Try to find customer by phone number, then get the associated User
-            return customerRepository.findByPhoneNumber(identifier)
+
+            // 2a. Try to find CUSTOMER by phone number (via Customer profile table)
+            Optional<User> customerUser = customerRepository.findByPhoneNumber(identifier)
                     .map(Customer::getUser);
+            if (customerUser.isPresent()) {
+                return customerUser;
+            }
+
+            // 2b. Try to find ADMIN by recovery phone number (via User table)
+            // Use stream to handle potential multiple matches, though recovery phone should ideally be unique.
+            Optional<User> adminUser = userRepository.findAll().stream()
+                    .filter(u -> "ADMIN".equals(u.getRole()))
+                    .filter(u -> identifier.equals(u.getRecoveryPhoneNumber()))
+                    .findFirst();
+
+            if (adminUser.isPresent()) {
+                return adminUser;
+            }
         }
 
         // 3. Not found by email or valid phone pattern
         return Optional.empty();
     }
 
-    @Transactional
-    public User updateAdminCredentials(String currentUsername, String newUsername, String newPassword) {
-        User adminUser = userRepository.findByUsername(currentUsername)
-                .orElseGet(() -> {
-                    User tempAdmin = new User();
-                    tempAdmin.setUsername(currentUsername);
-                    tempAdmin.setRole("ADMIN");
-                    return tempAdmin;
-                });
 
+
+    /**
+     * MODIFIED: Updates admin credentials and sets the flag.
+     */
+    @Transactional
+    public User updateAdminCredentials(String currentUsername, String newUsername, String newPassword, String recoveryPhoneNumber) {
+
+        // 1. Fetch the existing admin user from the DB
+        User adminUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new IllegalStateException("Admin user not found."));
+
+        // 2. Prevent overwriting another user if changing username
         if (!currentUsername.equals(newUsername) && userRepository.findByUsername(newUsername).isPresent()) {
             throw new IllegalStateException("The new username is already taken.");
         }
 
+        // 3. Validation: Ensure phone number is valid
+        if (!PHONE_PATTERN.matcher(recoveryPhoneNumber).matches()) {
+            throw new IllegalStateException("Invalid phone number format for recovery.");
+        }
+
+        // Validation: Enforce new password policy
+        if (!PASSWORD_POLICY_PATTERN.matcher(newPassword).matches()) {
+            throw new IllegalStateException("New password does not meet complexity requirements (Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character).");
+        }
+
+
+        // 4. Apply changes and set the critical flags
         adminUser.setUsername(newUsername);
         adminUser.setPassword(passwordEncoder.encode(newPassword));
+        adminUser.setRecoveryPhoneNumber(recoveryPhoneNumber); // NEW: Save the recovery phone
         adminUser.setEmailVerified(true);
+        adminUser.setCredentialsUpdated(true); // This invalidates the default login.
+
         return userRepository.save(adminUser);
+    }
+
+    // --- NEW: Check Admin Update Status ---
+    public boolean isAdminCredentialsUpdated(String username) {
+        // This method is called by AdminController to check the flag
+        return userRepository.findByUsername(username)
+                .filter(u -> "ADMIN".equals(u.getRole()))
+                .map(User::getCredentialsUpdated)
+                .orElse(false);
     }
 
 
@@ -236,7 +302,7 @@ public class UserService implements UserDetailsService {
     }
 
 
-    // --- NEW: Email Change Logic (Critical Transaction Fix Applied) ---
+    // --- NEW: Email Change Logic (Critical Constructor Fix Applied) ---
 
     /**
      * Step 1: Validates the new email, checks if it's available, and sends an OTP to it.
@@ -262,11 +328,21 @@ public class UserService implements UserDetailsService {
 
         // 4. CRITICAL FIX: Delete the existing token *before* saving the new one and flush the changes.
         tokenRepository.deleteByUserId(user.getId());
-        tokenRepository.flush(); // <--- CRITICAL FIX: Ensure DELETE is executed NOW to clear the unique slot.
+        tokenRepository.flush();
 
         // 5. Create OTP: The token is linked to the existing user ID.
         // We create a temp User object *in memory* with the new email for the EmailService to target.
-        User tempUserForEmail = new User(user.getId(), newEmail, user.getPassword(), user.getRole(), user.getEmailVerified());
+        // CRITICAL CONSTRUCTOR FIX: Ensure all 7 fields are provided.
+        User tempUserForEmail = new User(
+                user.getId(),
+                newEmail,
+                user.getPassword(),
+                user.getRole(),
+                user.getEmailVerified(),
+                user.getCredentialsUpdated(),
+                user.getRecoveryPhoneNumber() // <--- ADDED THE MISSING 7TH ARGUMENT
+        );
+
 
         VerificationToken otpToken = new VerificationToken(user, TokenType.NEW_EMAIL_VERIFICATION);
         tokenRepository.save(otpToken); // Saves token linked to old User ID
@@ -482,777 +558,3 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 }
-
-
-
-
-/*package com.anvistudio.boutique.service;
-
-import com.anvistudio.boutique.model.Customer;
-import com.anvistudio.boutique.model.User;
-import com.anvistudio.boutique.model.VerificationToken;
-import com.anvistudio.boutique.model.VerificationToken.TokenType;
-import com.anvistudio.boutique.repository.CustomerRepository;
-import com.anvistudio.boutique.repository.UserRepository;
-import com.anvistudio.boutique.repository.VerificationTokenRepository;
-import com.anvistudio.boutique.dto.RegistrationDTO;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collections;
-import java.util.Optional;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.regex.Pattern;
-
-@Service
-public class UserService implements UserDetailsService {
-
-    private static final Pattern PHONE_PATTERN = Pattern.compile("^[+]?[0-9]{10,15}$");
-    private static final Pattern PASSWORD_POLICY_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$");
-
-
-    public final UserRepository userRepository;
-    private final CustomerRepository customerRepository;
-    private final VerificationTokenRepository tokenRepository;
-    private final EmailService emailService;
-    private final PasswordEncoder passwordEncoder;
-
-    public UserService(UserRepository userRepository, CustomerRepository customerRepository,
-                       VerificationTokenRepository tokenRepository, EmailService emailService,
-                       PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.customerRepository = customerRepository;
-        this.tokenRepository = tokenRepository;
-        this.emailService = emailService;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    // ... (loadUserByUsername and findUserByIdentifier remain unchanged)
-
-    @Override
-    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
-
-        Optional<User> userOptional = findUserByIdentifier(identifier);
-
-        // --- 1. Handle Admin User (must still use "admin" as username/email) ---
-        if ("admin".equalsIgnoreCase(identifier) && userOptional.isEmpty()) {
-            return org.springframework.security.core.userdetails.User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("password123"))
-                    .roles("ADMIN")
-                    .disabled(false).accountExpired(false).credentialsExpired(false).accountLocked(false).build();
-        }
-
-        // --- 2. Handle Database User ---
-        User user = userOptional
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
-
-        // CRITICAL: User must be verified to log in (except for Admin)
-        boolean isEnabled = user.getEmailVerified() || "ADMIN".equals(user.getRole());
-
-        // Throw DisabledException if not enabled (will be caught by SecurityConfig failure handler)
-        if (!isEnabled) {
-            throw new DisabledException("Account is not yet verified. Please confirm your email address.");
-        }
-
-
-        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole());
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                isEnabled,
-                true, true, true,
-                Collections.singleton(authority)
-        );
-    }
-
-    *//**
-     * Finds the User entity (not UserDetails) by username (email).
-     *//*
-    public Optional<User> findUserByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    *//**
-     * NEW: Finds a User by either username (email) or phone number.
-     * Used by loadUserByUsername and Forgot Password feature.
-     *//*
-    public Optional<User> findUserByIdentifier(String identifier) {
-        // 1. Try to treat identifier as email (Username)
-        Optional<User> userByEmail = userRepository.findByUsername(identifier);
-        if (userByEmail.isPresent()) {
-            return userByEmail;
-        }
-
-        // 2. If not found by email, check if it matches phone pattern
-        if (PHONE_PATTERN.matcher(identifier).matches()) {
-            // Try to find customer by phone number, then get the associated User
-            return customerRepository.findByPhoneNumber(identifier)
-                    .map(Customer::getUser);
-        }
-
-        // 3. Not found by email or valid phone pattern
-        return Optional.empty();
-    }
-
-    @Transactional
-    public User updateAdminCredentials(String currentUsername, String newUsername, String newPassword) {
-        User adminUser = userRepository.findByUsername(currentUsername)
-                .orElseGet(() -> {
-                    User tempAdmin = new User();
-                    tempAdmin.setUsername(currentUsername);
-                    tempAdmin.setRole("ADMIN");
-                    return tempAdmin;
-                });
-
-        if (!currentUsername.equals(newUsername) && userRepository.findByUsername(newUsername).isPresent()) {
-            throw new IllegalStateException("The new username is already taken.");
-        }
-
-        adminUser.setUsername(newUsername);
-        adminUser.setPassword(passwordEncoder.encode(newPassword));
-        adminUser.setEmailVerified(true);
-        return userRepository.save(adminUser);
-    }
-
-
-    // --- Customer Registration Logic (unchanged) ---
-    @Transactional
-    public User registerCustomer(RegistrationDTO registrationDTO) {
-        // ... (registration logic remains the same)
-        if (userRepository.findByUsername(registrationDTO.getUsername()).isPresent()) {
-            throw new IllegalStateException("Username is already taken.");
-        }
-
-        // Ensure phone number isn't already used
-        if (customerRepository.findByPhoneNumber(registrationDTO.getPhoneNumber()).isPresent()) {
-            throw new IllegalStateException("Phone number is already registered.");
-        }
-
-        if (!registrationDTO.getPassword().equals(registrationDTO.getConfirmPassword())) {
-            throw new IllegalStateException("Passwords do not match.");
-        }
-
-        User newUser = new User();
-        newUser.setUsername(registrationDTO.getUsername());
-        newUser.setPassword(passwordEncoder.encode(registrationDTO.getPassword()));
-        newUser.setRole("CUSTOMER");
-        newUser.setEmailVerified(false);
-        User savedUser = userRepository.save(newUser);
-
-        Customer newCustomer = new Customer();
-        newCustomer.setFirstName(registrationDTO.getFirstName());
-        newCustomer.setLastName(registrationDTO.getLastName());
-        newCustomer.setUser(savedUser);
-        newCustomer.setPhoneNumber(registrationDTO.getPhoneNumber());
-        newCustomer.setPreferredSize(registrationDTO.getPreferredSize());
-        newCustomer.setGender(registrationDTO.getGender());
-        newCustomer.setTermsAccepted(registrationDTO.getTermsAccepted());
-        newCustomer.setNewsletterOptIn(registrationDTO.getNewsletterOptIn());
-
-        if (registrationDTO.getDateOfBirth() != null && !registrationDTO.getDateOfBirth().isEmpty()) {
-            try {
-                Date dob = new SimpleDateFormat("yyyy-MM-dd").parse(registrationDTO.getDateOfBirth());
-                newCustomer.setDateOfBirth(dob);
-            } catch (Exception e) {
-                System.err.println("Failed to parse DOB: " + e.getMessage());
-            }
-        }
-
-        customerRepository.save(newCustomer);
-
-        // Create OTP and send email for REGISTRATION
-        createOtpAndSendEmail(savedUser);
-
-        return savedUser;
-    }
-
-    *//**
-     * Creates a new OTP for the user and triggers the email sending (For REGISTRATION).
-     *//*
-    @Transactional
-    public void createOtpAndSendEmail(User user) {
-        // ... (OTP creation logic remains the same)
-        tokenRepository.deleteByUserId(user.getId());
-
-        VerificationToken otpToken = new VerificationToken(user, TokenType.REGISTRATION); // Use REGISTRATION type
-        tokenRepository.save(otpToken);
-
-        emailService.sendOtpEmail(user, otpToken);
-    }
-
-    // --- Password Reset Logic (unchanged) ---
-    @Transactional
-    public User findAndCreateResetOtp(String identifier) throws UsernameNotFoundException {
-        // ... (reset OTP logic remains the same)
-        // Use the general identifier lookup
-        User user = findUserByIdentifier(identifier)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
-
-        // Create OTP and send email for PASSWORD_RESET
-        createResetOtpAndSendEmail(user);
-
-        return user;
-    }
-
-
-    @Transactional
-    public void createResetOtpAndSendEmail(User user) {
-        // ... (reset OTP creation logic remains the same)
-        // Clean up any existing tokens for this user first
-        tokenRepository.deleteByUserId(user.getId());
-
-        VerificationToken resetToken = new VerificationToken(user, TokenType.PASSWORD_RESET); // Use RESET type
-        tokenRepository.save(resetToken);
-
-        emailService.sendOtpEmail(user, resetToken);
-    }
-
-    public Optional<VerificationToken> findActiveToken(String email, TokenType tokenType) {
-        // ... (token lookup remains the same)
-        return userRepository.findByUsername(email)
-                .flatMap(user -> tokenRepository.findByUserId(user.getId()))
-                .filter(token -> token.getTokenType() == tokenType && !token.isExpired());
-    }
-
-    @Transactional
-    public Optional<User> verifyOtp(String otp, String username, TokenType tokenType) {
-        // ... (OTP verification logic remains the same)
-        Optional<User> userOptional = userRepository.findByUsername(username);
-
-        if (userOptional.isEmpty()) {
-            return Optional.empty(); // User not found
-        }
-
-        User user = userOptional.get();
-
-        // Find the specific token for this user
-        // Ensure we fetch the token that matches the required type
-        Optional<VerificationToken> tokenOptional = tokenRepository.findByUserId(user.getId())
-                .filter(token -> token.getTokenType() == tokenType);
-
-        if (tokenOptional.isEmpty()) {
-            // No active token of the correct type found
-            return Optional.empty();
-        }
-
-        VerificationToken otpToken = tokenOptional.get();
-
-        // Check 1: Expiry
-        if (otpToken.isExpired()) {
-            tokenRepository.delete(otpToken);
-            return Optional.empty();
-        }
-
-        // Check 2: OTP match
-        if (!otpToken.getToken().equals(otp)) {
-            return Optional.empty();
-        }
-
-        // Valid OTP found. Delete the token immediately after success.
-        tokenRepository.delete(otpToken);
-
-        return Optional.of(user);
-    }
-
-    @Transactional
-    public String confirmUserAccountWithOtp(String otp, String username) {
-        // ... (account confirmation logic remains the same)
-        Optional<User> verifiedUser = verifyOtp(otp, username, TokenType.REGISTRATION);
-
-        if (verifiedUser.isPresent()) {
-            User user = verifiedUser.get();
-            // Mark user as verified
-            user.setEmailVerified(true);
-            userRepository.save(user);
-            return "Verification successful: Your account is now active!";
-        } else {
-            // Provide specific error feedback based on why the token failed (though complex to differentiate here)
-            return "Invalid or expired OTP. Please check the code, request a new one, and try again.";
-        }
-    }
-
-    @Transactional
-    public void resetPassword(String email, String newPassword) {
-        // ... (password reset logic remains the same)
-        User user = userRepository.findByUsername(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found for reset."));
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-    }
-
-    public Optional<Customer> getCustomerDetailsByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .flatMap(user -> customerRepository.findByUserId(user.getId()));
-    }
-
-    *//**
-     * NEW: Creates a DTO from the Customer entity for form pre-population.
-     *//*
-    public RegistrationDTO getProfileDTOFromCustomer(Customer customer) {
-        RegistrationDTO dto = new RegistrationDTO();
-        dto.setFirstName(customer.getFirstName());
-        dto.setLastName(customer.getLastName());
-        dto.setUsername(customer.getUser().getUsername()); // Email
-        dto.setPhoneNumber(customer.getPhoneNumber());
-        dto.setPreferredSize(customer.getPreferredSize());
-        dto.setGender(customer.getGender());
-        dto.setNewsletterOptIn(customer.getNewsletterOptIn());
-
-        if (customer.getDateOfBirth() != null) {
-            dto.setDateOfBirth(new SimpleDateFormat("yyyy-MM-dd").format(customer.getDateOfBirth()));
-        }
-
-        // Note: Password fields are left null/empty for security
-
-        return dto;
-    }
-
-
-    *//**
-     * NEW: Updates customer details (names, phone, optional fields).
-     *//*
-    @Transactional
-    public void updateCustomerProfile(String currentUsername, RegistrationDTO profileDTO) {
-        User user = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found."));
-
-        Customer customer = customerRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException("Customer profile not found."));
-
-        // 1. Validate Phone Number change
-        if (!customer.getPhoneNumber().equals(profileDTO.getPhoneNumber())) {
-            // Check if the new phone number is already registered by another customer
-            Optional<Customer> existingCustomerWithNewPhone = customerRepository.findByPhoneNumber(profileDTO.getPhoneNumber());
-
-            if (existingCustomerWithNewPhone.isPresent() && !existingCustomerWithNewPhone.get().getId().equals(customer.getId())) {
-                throw new IllegalStateException("The new phone number is already registered with another account.");
-            }
-            customer.setPhoneNumber(profileDTO.getPhoneNumber());
-        }
-
-        // 2. Update Customer fields
-        customer.setFirstName(profileDTO.getFirstName());
-        customer.setLastName(profileDTO.getLastName());
-        customer.setPreferredSize(profileDTO.getPreferredSize());
-        customer.setGender(profileDTO.getGender());
-        customer.setNewsletterOptIn(profileDTO.getNewsletterOptIn());
-
-        // Update Date of Birth
-        if (profileDTO.getDateOfBirth() != null && !profileDTO.getDateOfBirth().isEmpty()) {
-            try {
-                Date dob = new SimpleDateFormat("yyyy-MM-dd").parse(profileDTO.getDateOfBirth());
-                customer.setDateOfBirth(dob);
-            } catch (Exception e) {
-                System.err.println("Failed to parse DOB during update: " + e.getMessage());
-            }
-        } else {
-            customer.setDateOfBirth(null); // Allow clearing DOB
-        }
-
-        customerRepository.save(customer);
-        // Note: User.username (email) is NOT updated here. That requires a separate secure flow.
-    }
-
-    *//**
-     * NEW: Changes the customer's password.
-     *//*
-    @Transactional
-    public void changePassword(String username, String currentPassword, String newPassword, String confirmPassword) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found."));
-
-        // 1. Validate current password
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            throw new IllegalStateException("Your current password is not correct.");
-        }
-
-        // 2. Validate new password match
-        if (!newPassword.equals(confirmPassword)) {
-            throw new IllegalStateException("New passwords do not match.");
-        }
-
-        // 3. Validate new password strength (using the same pattern as registration DTO)
-        if (!PASSWORD_POLICY_PATTERN.matcher(newPassword).matches()) {
-            throw new IllegalStateException("New password does not meet complexity requirements (Min 8 chars, 1 uppercase, 1 lowercase, 1 number).");
-        }
-
-        // 4. Update and Save
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-    }
-}*/
-
-
-
-
-
-
-
-/*
-package com.anvistudio.boutique.service;
-
-import com.anvistudio.boutique.model.Customer;
-import com.anvistudio.boutique.model.User;
-import com.anvistudio.boutique.model.VerificationToken;
-import com.anvistudio.boutique.model.VerificationToken.TokenType;
-import com.anvistudio.boutique.repository.CustomerRepository;
-import com.anvistudio.boutique.repository.UserRepository;
-import com.anvistudio.boutique.repository.VerificationTokenRepository;
-import com.anvistudio.boutique.dto.RegistrationDTO;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-//import org.springframework.security.core.userdetails.DisabledException;
-
-import java.util.Collections;
-import java.util.Optional;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.regex.Pattern;
-
-@Service
-public class UserService implements UserDetailsService {
-
-    private static final Pattern PHONE_PATTERN = Pattern.compile("^[+]?[0-9]{10,15}$");
-
-    public final UserRepository userRepository;
-    private final CustomerRepository customerRepository;
-    private final VerificationTokenRepository tokenRepository;
-    private final EmailService emailService;
-    private final PasswordEncoder passwordEncoder;
-
-    public UserService(UserRepository userRepository, CustomerRepository customerRepository,
-                       VerificationTokenRepository tokenRepository, EmailService emailService,
-                       PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.customerRepository = customerRepository;
-        this.tokenRepository = tokenRepository;
-        this.emailService = emailService;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    */
-/**
-     * MODIFIED: Added phone number lookup logic for login.
-     *//*
-
-    @Override
-    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
-
-        Optional<User> userOptional = findUserByIdentifier(identifier);
-
-        // --- 1. Handle Admin User (must still use "admin" as username/email) ---
-        if ("admin".equalsIgnoreCase(identifier) && userOptional.isEmpty()) {
-            return org.springframework.security.core.userdetails.User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("password123"))
-                    .roles("ADMIN")
-                    .disabled(false).accountExpired(false).credentialsExpired(false).accountLocked(false).build();
-        }
-
-        // --- 2. Handle Database User ---
-        User user = userOptional
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
-
-        // CRITICAL: User must be verified to log in (except for Admin)
-        boolean isEnabled = user.getEmailVerified() || "ADMIN".equals(user.getRole());
-
-        // Throw DisabledException if not enabled (will be caught by SecurityConfig failure handler)
-        if (!isEnabled) {
-            throw new DisabledException("Account is not yet verified. Please confirm your email address.");
-        }
-
-
-        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole());
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                isEnabled,
-                true, true, true,
-                Collections.singleton(authority)
-        );
-    }
-
-    // --- NEW/MODIFIED: User Lookup Methods ---
-
-    */
-/**
-     * Finds the User entity (not UserDetails) by username (email).
-     *//*
-
-    public Optional<User> findUserByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    */
-/**
-     * NEW: Finds a User by either username (email) or phone number.
-     * Used by loadUserByUsername and Forgot Password feature.
-     *//*
-
-    public Optional<User> findUserByIdentifier(String identifier) {
-        // 1. Try to treat identifier as email (Username)
-        Optional<User> userByEmail = userRepository.findByUsername(identifier);
-        if (userByEmail.isPresent()) {
-            return userByEmail;
-        }
-
-        // 2. If not found by email, check if it matches phone pattern
-        if (PHONE_PATTERN.matcher(identifier).matches()) {
-            // Try to find customer by phone number, then get the associated User
-            return customerRepository.findByPhoneNumber(identifier)
-                    .map(Customer::getUser);
-        }
-
-        // 3. Not found by email or valid phone pattern
-        return Optional.empty();
-    }
-    // ------------------------------------------
-
-    @Transactional
-    public User updateAdminCredentials(String currentUsername, String newUsername, String newPassword) {
-        User adminUser = userRepository.findByUsername(currentUsername)
-                .orElseGet(() -> {
-                    User tempAdmin = new User();
-                    tempAdmin.setUsername(currentUsername);
-                    tempAdmin.setRole("ADMIN");
-                    return tempAdmin;
-                });
-
-        if (!currentUsername.equals(newUsername) && userRepository.findByUsername(newUsername).isPresent()) {
-            throw new IllegalStateException("The new username is already taken.");
-        }
-
-        adminUser.setUsername(newUsername);
-        adminUser.setPassword(passwordEncoder.encode(newPassword));
-        adminUser.setEmailVerified(true);
-        return userRepository.save(adminUser);
-    }
-
-
-    // --- Customer Registration Logic ---
-    @Transactional
-    public User registerCustomer(RegistrationDTO registrationDTO) {
-
-        if (userRepository.findByUsername(registrationDTO.getUsername()).isPresent()) {
-            throw new IllegalStateException("Username is already taken.");
-        }
-
-        // Ensure phone number isn't already used
-        if (customerRepository.findByPhoneNumber(registrationDTO.getPhoneNumber()).isPresent()) {
-            throw new IllegalStateException("Phone number is already registered.");
-        }
-
-        if (!registrationDTO.getPassword().equals(registrationDTO.getConfirmPassword())) {
-            throw new IllegalStateException("Passwords do not match.");
-        }
-
-        User newUser = new User();
-        newUser.setUsername(registrationDTO.getUsername());
-        newUser.setPassword(passwordEncoder.encode(registrationDTO.getPassword()));
-        newUser.setRole("CUSTOMER");
-        newUser.setEmailVerified(false);
-        User savedUser = userRepository.save(newUser);
-
-        Customer newCustomer = new Customer();
-        newCustomer.setFirstName(registrationDTO.getFirstName());
-        newCustomer.setLastName(registrationDTO.getLastName());
-        newCustomer.setUser(savedUser);
-        newCustomer.setPhoneNumber(registrationDTO.getPhoneNumber());
-        newCustomer.setPreferredSize(registrationDTO.getPreferredSize());
-        newCustomer.setGender(registrationDTO.getGender());
-        newCustomer.setTermsAccepted(registrationDTO.getTermsAccepted());
-        newCustomer.setNewsletterOptIn(registrationDTO.getNewsletterOptIn());
-
-        if (registrationDTO.getDateOfBirth() != null && !registrationDTO.getDateOfBirth().isEmpty()) {
-            try {
-                Date dob = new SimpleDateFormat("yyyy-MM-dd").parse(registrationDTO.getDateOfBirth());
-                newCustomer.setDateOfBirth(dob);
-            } catch (Exception e) {
-                System.err.println("Failed to parse DOB: " + e.getMessage());
-            }
-        }
-
-        customerRepository.save(newCustomer);
-
-        // Create OTP and send email for REGISTRATION
-        createOtpAndSendEmail(savedUser);
-
-        return savedUser;
-    }
-
-    */
-/**
-     * Creates a new OTP for the user and triggers the email sending (For REGISTRATION).
-     *//*
-
-    @Transactional
-    public void createOtpAndSendEmail(User user) {
-        // Ensure only one active token per user by deleting existing ones
-        tokenRepository.deleteByUserId(user.getId());
-
-        VerificationToken otpToken = new VerificationToken(user, TokenType.REGISTRATION); // Use REGISTRATION type
-        tokenRepository.save(otpToken);
-
-        emailService.sendOtpEmail(user, otpToken);
-    }
-
-    // --- NEW: Password Reset Logic ---
-
-    */
-/**
-     * Finds the user by email/phone and creates a new PASSWORD_RESET OTP.
-     * Called by AuthController's POST /forgot-password.
-     * @param identifier Email or phone number.
-     * @return The User entity whose reset OTP was sent.
-     * @throws UsernameNotFoundException if the user doesn't exist.
-     *//*
-
-    @Transactional
-    public User findAndCreateResetOtp(String identifier) throws UsernameNotFoundException {
-        // Use the general identifier lookup
-        User user = findUserByIdentifier(identifier)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
-
-        // Create OTP and send email for PASSWORD_RESET
-        createResetOtpAndSendEmail(user);
-
-        return user;
-    }
-
-
-    */
-/**
-     * Initiates the password reset process by creating and sending a PASSWORD_RESET OTP.
-     * @param user The user requesting the reset.
-     *//*
-
-    @Transactional
-    public void createResetOtpAndSendEmail(User user) {
-        // Clean up any existing tokens for this user first
-        tokenRepository.deleteByUserId(user.getId());
-
-        VerificationToken resetToken = new VerificationToken(user, TokenType.PASSWORD_RESET); // Use RESET type
-        tokenRepository.save(resetToken);
-
-        emailService.sendOtpEmail(user, resetToken);
-    }
-
-    */
-/**
-     * NEW: Finds the active token of a specific type for a user.
-     * Called by AuthController's GET /reset-otp validation.
-     *//*
-
-    public Optional<VerificationToken> findActiveToken(String email, TokenType tokenType) {
-        return userRepository.findByUsername(email)
-                .flatMap(user -> tokenRepository.findByUserId(user.getId()))
-                .filter(token -> token.getTokenType() == tokenType && !token.isExpired());
-    }
-
-    */
-/**
-     * Attempts to verify an OTP against a specific user and token type.
-     * @param otp The code submitted by the user.
-     * @param username The user's email identifier.
-     * @param tokenType The expected type (REGISTRATION or PASSWORD_RESET).
-     * @return The User object if valid, or Optional.empty().
-     *//*
-
-    @Transactional
-    public Optional<User> verifyOtp(String otp, String username, TokenType tokenType) {
-        Optional<User> userOptional = userRepository.findByUsername(username);
-
-        if (userOptional.isEmpty()) {
-            return Optional.empty(); // User not found
-        }
-
-        User user = userOptional.get();
-
-        // Find the specific token for this user
-        // Ensure we fetch the token that matches the required type
-        Optional<VerificationToken> tokenOptional = tokenRepository.findByUserId(user.getId())
-                .filter(token -> token.getTokenType() == tokenType);
-
-        if (tokenOptional.isEmpty()) {
-            // No active token of the correct type found
-            return Optional.empty();
-        }
-
-        VerificationToken otpToken = tokenOptional.get();
-
-        // Check 1: Expiry
-        if (otpToken.isExpired()) {
-            tokenRepository.delete(otpToken);
-            return Optional.empty();
-        }
-
-        // Check 2: OTP match
-        if (!otpToken.getToken().equals(otp)) {
-            return Optional.empty();
-        }
-
-        // Valid OTP found. Delete the token immediately after success.
-        tokenRepository.delete(otpToken);
-
-        return Optional.of(user);
-    }
-
-    */
-/**
-     * Confirms a user account after successful REGISTRATION OTP validation.
-     *//*
-
-    @Transactional
-    public String confirmUserAccountWithOtp(String otp, String username) {
-        Optional<User> verifiedUser = verifyOtp(otp, username, TokenType.REGISTRATION);
-
-        if (verifiedUser.isPresent()) {
-            User user = verifiedUser.get();
-            // Mark user as verified
-            user.setEmailVerified(true);
-            userRepository.save(user);
-            return "Verification successful: Your account is now active!";
-        } else {
-            // Provide specific error feedback based on why the token failed (though complex to differentiate here)
-            return "Invalid or expired OTP. Please check the code, request a new one, and try again.";
-        }
-    }
-
-    */
-/**
-     * Final step in password reset: update the password hash.
-     *//*
-
-    @Transactional
-    public void resetPassword(String email, String newPassword) {
-        User user = userRepository.findByUsername(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found for reset."));
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-    }
-
-    public Optional<Customer> getCustomerDetailsByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .flatMap(user -> customerRepository.findByUserId(user.getId()));
-    }
-}*/

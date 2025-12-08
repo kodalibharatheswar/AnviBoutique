@@ -1,3 +1,220 @@
+//package com.anvistudio.boutique.controller;
+//
+//import com.anvistudio.boutique.model.Customer;
+//import com.anvistudio.boutique.service.CartService;
+//import com.anvistudio.boutique.service.WishlistService;
+//import com.anvistudio.boutique.service.ProductService;
+//import com.anvistudio.boutique.service.UserService;
+//import com.anvistudio.boutique.dto.RegistrationDTO;
+//import org.springframework.security.core.annotation.AuthenticationPrincipal;
+//import org.springframework.security.core.context.SecurityContextHolder; // NEW IMPORT
+//import org.springframework.security.core.userdetails.UserDetails;
+//import org.springframework.stereotype.Controller;
+//import org.springframework.ui.Model;
+//import org.springframework.web.bind.annotation.GetMapping;
+//import org.springframework.web.bind.annotation.ModelAttribute;
+//import org.springframework.web.bind.annotation.PostMapping;
+//import org.springframework.web.bind.annotation.RequestMapping;
+//import org.springframework.web.bind.annotation.RequestParam;
+//import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+//
+//import java.util.Optional;
+//
+///**
+// * Controller for customer-specific pages, requiring ROLE_CUSTOMER access.
+// */
+//@Controller
+//@RequestMapping("/customer")
+//public class CustomerController {
+//
+//    private final ProductService productService;
+//    private final UserService userService;
+//    private final CartService cartService;
+//    private final WishlistService wishlistService;
+//
+//    // CONSTRUCTOR UPDATED to inject all necessary services
+//    public CustomerController(ProductService productService, UserService userService,
+//                              CartService cartService, WishlistService wishlistService) {
+//        this.productService = productService;
+//        this.userService = userService;
+//        this.cartService = cartService;
+//        this.wishlistService = wishlistService;
+//    }
+//
+//    /**
+//     * Redirects /customer/dashboard to the root / (home page) as the main view.
+//     */
+//    @GetMapping("/dashboard")
+//    public String customerDashboard() {
+//        return "redirect:/";
+//    }
+//
+//    // =========================================================================
+//    // 1. Customer Profile Management (No Change)
+//    // =========================================================================
+//
+//    /**
+//     * Displays the customer profile form.
+//     */
+//    @GetMapping("/profile")
+//    public String showCustomerProfile(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+//        String username = userDetails.getUsername();
+//
+//        Optional<Customer> customerOptional = userService.getCustomerDetailsByUsername(username);
+//
+//        if (customerOptional.isEmpty()) {
+//            // Should not happen for authenticated users, but redirect if data is missing
+//            return "redirect:/";
+//        }
+//
+//        Customer customer = customerOptional.get();
+//
+//        // Use a DTO to pre-populate the form for editing
+//        RegistrationDTO profileDTO = userService.getProfileDTOFromCustomer(customer);
+//        model.addAttribute("profileDTO", profileDTO);
+//        model.addAttribute("currentEmail", username);
+//
+//        // Pass customer object to the navbar fragment
+//        model.addAttribute("customer", customer);
+//
+//        return "customer_profile"; // Maps to the new template
+//    }
+//
+//
+//    /**
+//     * Handles the update of customer profile details (excluding password/email change flow).
+//     */
+//    @PostMapping("/profile/update")
+//    public String updateCustomerProfile(
+//            @AuthenticationPrincipal UserDetails userDetails,
+//            @ModelAttribute("profileDTO") RegistrationDTO profileDTO,
+//            RedirectAttributes redirectAttributes) {
+//
+//        String currentUsername = userDetails.getUsername();
+//
+//        try {
+//            userService.updateCustomerProfile(currentUsername, profileDTO);
+//            redirectAttributes.addFlashAttribute("successMessage", "Profile details updated successfully!");
+//        } catch (IllegalStateException e) {
+//            // Catches validation errors like phone number already taken
+//            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("errorMessage", "An unexpected error occurred during profile update.");
+//        }
+//
+//        return "redirect:/customer/profile";
+//    }
+//
+//    /**
+//     * Handles the password change request from the profile page.
+//     */
+//    @PostMapping("/profile/change-password")
+//    public String changeCustomerPassword(
+//            @AuthenticationPrincipal UserDetails userDetails,
+//            @RequestParam("currentPassword") String currentPassword,
+//            @RequestParam("newPassword") String newPassword,
+//            @RequestParam("confirmPassword") String confirmPassword,
+//            RedirectAttributes redirectAttributes) {
+//
+//        try {
+//            userService.changePassword(userDetails.getUsername(), currentPassword, newPassword, confirmPassword);
+//            redirectAttributes.addFlashAttribute("successMessage", "Password changed successfully! Please log in with your new password.");
+//
+//            // CRITICAL: Log user out after password change for security
+//            return "redirect:/logout";
+//
+//        } catch (IllegalStateException e) {
+//            redirectAttributes.addFlashAttribute("passwordError", e.getMessage());
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("passwordError", "An unexpected error occurred during password change.");
+//        }
+//
+//        return "redirect:/customer/profile";
+//    }
+//
+//    // =========================================================================
+//    // 2. Secure Email Change Flow
+//    // =========================================================================
+//
+//    /**
+//     * STEP 1 (POST): Initiates the email change process by sending an OTP to the NEW email.
+//     */
+//    @PostMapping("/profile/change-email/initiate")
+//    public String initiateEmailChange(
+//            @AuthenticationPrincipal UserDetails userDetails,
+//            @RequestParam("newEmail") String newEmail,
+//            RedirectAttributes redirectAttributes) {
+//
+//        try {
+//            userService.initiateEmailChange(userDetails.getUsername(), newEmail);
+//
+//            redirectAttributes.addFlashAttribute("successMessage", "Verification code sent to " + newEmail + ".");
+//            // Redirect to the new OTP verification page
+//            return "redirect:/customer/profile/verify-new-email?newEmail=" + newEmail;
+//
+//        } catch (IllegalStateException e) {
+//            redirectAttributes.addFlashAttribute("emailChangeError", e.getMessage());
+//            return "redirect:/customer/profile";
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("emailChangeError", "Error initiating email change. Please try again.");
+//            return "redirect:/customer/profile";
+//        }
+//    }
+//
+//
+//    /**
+//     * STEP 2 (GET): Displays the OTP verification form for the new email.
+//     */
+//    @GetMapping("/profile/verify-new-email")
+//    public String showVerifyNewEmailForm(@RequestParam("newEmail") String newEmail, Model model) {
+//
+//        // We check if a token exists using the proposed new email (which is the recipient).
+//        if (userService.findActiveToken(newEmail, com.anvistudio.boutique.model.VerificationToken.TokenType.NEW_EMAIL_VERIFICATION).isEmpty()) {
+//            // Only show the error if the active token check explicitly fails.
+//            model.addAttribute("error", "No active verification request found. Please try initiating the change again.");
+//        }
+//
+//        model.addAttribute("newEmail", newEmail);
+//        return "verify_new_email";
+//    }
+//
+//
+//    /**
+//     * STEP 3 (POST): Validates the OTP and commits the new email to the database.
+//     * CRITICAL FIX APPLIED HERE.
+//     */
+//    @PostMapping("/profile/change-email/finalize")
+//    public String finalizeEmailChange(
+//            @AuthenticationPrincipal UserDetails userDetails,
+//            @RequestParam("newEmail") String newEmail,
+//            @RequestParam("otp") String otp,
+//            RedirectAttributes redirectAttributes) {
+//
+//        try {
+//            String currentUsername = userDetails.getUsername();
+//            userService.finalizeEmailChange(currentUsername, newEmail, otp);
+//
+//            // 1. Success! Clear the security context immediately to log the user out.
+//            SecurityContextHolder.clearContext();
+//
+//            // 2. Redirect directly to the login page with a success message.
+//            redirectAttributes.addFlashAttribute("successMessage", "Your email address has been successfully updated to " + newEmail + ". Please log in with your new email.");
+//
+//            // FIX: Redirect directly to /login instead of relying on the /logout handler logic
+//            return "redirect:/login";
+//
+//        } catch (IllegalStateException e) {
+//            redirectAttributes.addFlashAttribute("emailChangeError", e.getMessage());
+//            return "redirect:/customer/profile/verify-new-email?newEmail=" + newEmail;
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("emailChangeError", "Error finalizing email change.");
+//            return "redirect:/customer/profile/verify-new-email?newEmail=" + newEmail;
+//        }
+//    }
+//}
+//
+
+
 package com.anvistudio.boutique.controller;
 
 import com.anvistudio.boutique.model.Customer;
@@ -165,10 +382,40 @@ public class CustomerController {
     }
 
 
+
+    /**
+     * STEP 2 (GET): Displays the OTP verification form for the new email.
+     * MODIFIED: Added check for empty newEmail parameter.
+     */
+    @GetMapping("/profile/verify-new-email")
+    public String showVerifyNewEmailForm(@RequestParam(value = "newEmail", required = false) String newEmail, Model model, RedirectAttributes redirectAttributes) {
+
+        // --- NEW CHECK: If the email parameter is missing or empty ---
+        if (newEmail == null || newEmail.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("emailChangeError", "Error: Please provide the new email address to start verification.");
+            return "redirect:/customer/profile";
+        }
+        // --- END NEW CHECK ---
+
+        // Check if a token for this new email exists.
+        if (userService.findActiveToken(newEmail, com.anvistudio.boutique.model.VerificationToken.TokenType.NEW_EMAIL_VERIFICATION).isEmpty()) {
+
+            // If no token is found, we pass the error back as a model attribute
+            // so the user sees the error on the verification page itself.
+            model.addAttribute("newEmail", newEmail);
+            model.addAttribute("error", "The verification link or code has expired. Please return to your profile and re-initiate the email change.");
+//            model.addAttribute("error", "No active verification request found. Please try initiating the change again.");
+            return "verify_new_email";
+        }
+
+        model.addAttribute("newEmail", newEmail);
+        return "verify_new_email";
+    }
+
     /**
      * STEP 2 (GET): Displays the OTP verification form for the new email.
      */
-    @GetMapping("/profile/verify-new-email")
+    /*@GetMapping("/profile/verify-new-email")
     public String showVerifyNewEmailForm(@RequestParam("newEmail") String newEmail, Model model) {
 
         // Check if a token for this new email exists. If not, redirect back to profile.
@@ -183,7 +430,7 @@ public class CustomerController {
 
         model.addAttribute("newEmail", newEmail);
         return "verify_new_email"; // Maps to the new template
-    }
+    }*/
 
 
     /**
@@ -213,192 +460,3 @@ public class CustomerController {
         }
     }
 }
-
-
-
-/*package com.anvistudio.boutique.controller;
-
-import com.anvistudio.boutique.model.Customer;
-import com.anvistudio.boutique.service.CartService;
-import com.anvistudio.boutique.service.WishlistService;
-import com.anvistudio.boutique.service.ProductService;
-import com.anvistudio.boutique.service.UserService;
-import com.anvistudio.boutique.dto.RegistrationDTO; // Reusing DTO for update clarity
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.Optional;
-
-*//**
- * Controller for customer-specific pages, requiring ROLE_CUSTOMER access.
- *//*
-@Controller
-@RequestMapping("/customer")
-public class CustomerController {
-
-    private final ProductService productService;
-    private final UserService userService;
-    private final CartService cartService;
-    private final WishlistService wishlistService;
-
-    // CONSTRUCTOR UPDATED to inject all necessary services
-    public CustomerController(ProductService productService, UserService userService,
-                              CartService cartService, WishlistService wishlistService) {
-        this.productService = productService;
-        this.userService = userService;
-        this.cartService = cartService;
-        this.wishlistService = wishlistService;
-    }
-
-    *//**
-     * Redirects /customer/dashboard to the root / (home page) as the main view.
-     *//*
-    @GetMapping("/dashboard")
-    public String customerDashboard() {
-        return "redirect:/";
-    }
-
-    // =========================================================================
-    // NEW: Customer Profile Management
-    // =========================================================================
-
-    *//**
-     * Displays the customer profile form.
-     *//*
-    @GetMapping("/profile")
-    public String showCustomerProfile(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        String username = userDetails.getUsername();
-
-        Optional<Customer> customerOptional = userService.getCustomerDetailsByUsername(username);
-
-        if (customerOptional.isEmpty()) {
-            // Should not happen for authenticated users, but redirect if data is missing
-            return "redirect:/";
-        }
-
-        Customer customer = customerOptional.get();
-
-        // Use a DTO to pre-populate the form for editing
-        RegistrationDTO profileDTO = userService.getProfileDTOFromCustomer(customer);
-        model.addAttribute("profileDTO", profileDTO);
-        model.addAttribute("currentEmail", username);
-
-        // Pass customer object to the navbar fragment
-        model.addAttribute("customer", customer);
-
-        return "customer_profile"; // Maps to the new template
-    }
-
-
-    *//**
-     * Handles the update of customer profile details (excluding password/email change flow).
-     *//*
-    @PostMapping("/profile/update")
-    public String updateCustomerProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @ModelAttribute("profileDTO") RegistrationDTO profileDTO,
-            RedirectAttributes redirectAttributes) {
-
-        String currentUsername = userDetails.getUsername();
-
-        try {
-            userService.updateCustomerProfile(currentUsername, profileDTO);
-            redirectAttributes.addFlashAttribute("successMessage", "Profile details updated successfully!");
-        } catch (IllegalStateException e) {
-            // Catches validation errors like phone number already taken
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "An unexpected error occurred during profile update.");
-        }
-
-        return "redirect:/customer/profile";
-    }
-
-    *//**
-     * Handles the password change request from the profile page.
-     * Uses the existing UserDetails (username) for authentication.
-     *//*
-    @PostMapping("/profile/change-password")
-    public String changeCustomerPassword(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam("currentPassword") String currentPassword,
-            @RequestParam("newPassword") String newPassword,
-            @RequestParam("confirmPassword") String confirmPassword,
-            RedirectAttributes redirectAttributes) {
-
-        try {
-            // The service method handles current password validation and update
-            userService.changePassword(userDetails.getUsername(), currentPassword, newPassword, confirmPassword);
-            redirectAttributes.addFlashAttribute("successMessage", "Password changed successfully! Please log in with your new password.");
-
-            // CRITICAL: Log user out after password change for security
-            return "redirect:/logout";
-
-        } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("passwordError", e.getMessage());
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("passwordError", "An unexpected error occurred during password change.");
-        }
-
-        return "redirect:/customer/profile";
-    }
-}*/
-
-
-
-/*
-package com.anvistudio.boutique.controller;
-
-import com.anvistudio.boutique.model.Customer;
-import com.anvistudio.boutique.service.CartService; // NEW
-import com.anvistudio.boutique.service.WishlistService; // NEW
-import com.anvistudio.boutique.service.ProductService;
-import com.anvistudio.boutique.service.UserService;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.util.Optional;
-
-*/
-/**
- * Controller for customer-specific pages, requiring ROLE_CUSTOMER access.
- *//*
-
-@Controller
-@RequestMapping("/customer")
-public class CustomerController {
-
-    private final ProductService productService;
-    private final UserService userService;
-    private final CartService cartService; // NEW FIELD
-    private final WishlistService wishlistService; // NEW FIELD
-
-    // CONSTRUCTOR UPDATED to inject all necessary services
-    public CustomerController(ProductService productService, UserService userService,
-                              CartService cartService, WishlistService wishlistService) {
-        this.productService = productService;
-        this.userService = userService;
-        this.cartService = cartService;
-        this.wishlistService = wishlistService;
-    }
-
-    */
-/**
-     * Shows the customer dashboard, displaying products and customer details.
-     * @param userDetails The details of the currently logged-in customer (from Spring Security).
-     *//*
-
-    @GetMapping("/dashboard")
-    public String customerDashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-
-        return "redirect:/";
-    }
-}*/

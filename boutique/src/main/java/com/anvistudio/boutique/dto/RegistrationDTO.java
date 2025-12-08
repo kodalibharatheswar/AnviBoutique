@@ -25,9 +25,9 @@ public class RegistrationDTO implements Serializable {
     @NotBlank(message = "Email (Username) is required.")
     private String username; // Mapped to User.username
 
-    // Password Policy: min 8 chars, 1 uppercase, 1 lowercase, 1 digit
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$",
-            message = "Password must be at least 8 characters long and contain one uppercase letter, one lowercase letter, and one number.")
+    // MODIFIED: Password Policy: min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special character
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+            message = "Password must be at least 8 characters long and contain one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&).")
     @NotBlank(message = "Password is required.")
     private String password;
 

@@ -50,6 +50,10 @@
         .strength-2 { width: 50%; background-color: #ff9800; } /* Medium */
         .strength-3 { width: 75%; background-color: #4CAF50; } /* Strong */
         .strength-4 { width: 100%; background-color: #007bff; } /* Very Strong */
+        .password-toggle-btn {
+            cursor: pointer;
+            z-index: 100;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -97,10 +101,19 @@
             <!-- Password -->
             <div class="col-md-6 mb-3">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" th:field="*{password}" th:classappend="${#fields.hasErrors('password') ? 'is-invalid' : ''}" class="form-control" id="password" required onkeyup="checkPasswordStrength(); checkPasswordMatch();"/>
+                <!-- START Toggle Input Group -->
+                <div class="input-group">
+                    <input type="password" th:field="*{password}" th:classappend="${#fields.hasErrors('password') ? 'is-invalid' : ''}" class="form-control" id="password" required onkeyup="checkPasswordStrength(); checkPasswordMatch();"/>
+                    <span class="input-group-text password-toggle-btn"
+                          onclick="togglePasswordVisibility('password', this)">
+                        <i class="fa fa-eye-slash"></i>
+                    </span>
+                </div>
+                <!-- END Toggle Input Group -->
                 <div class="mt-1">
                     <div id="password-strength" class="password-strength-bar strength-0"></div>
-                    <small class="form-text text-muted" id="strength-text">Minimum 8 characters, with uppercase, lowercase, and a number.</small>
+                    <!-- MODIFIED MESSAGE -->
+                    <small class="form-text text-muted" id="strength-text">Minimum 8 chars, with uppercase, lowercase, number, and special character (@$!%*?&).</small>
                 </div>
                 <div class="text-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
             </div>
@@ -108,7 +121,15 @@
             <!-- Confirm Password -->
             <div class="col-md-6 mb-3">
                 <label for="confirmPassword" class="form-label">Confirm Password</label>
-                <input type="password" th:field="*{confirmPassword}" th:classappend="${#fields.hasErrors('confirmPassword') ? 'is-invalid' : ''}" class="form-control" id="confirmPassword" required onkeyup="checkPasswordMatch();"/>
+                <!-- START Toggle Input Group -->
+                <div class="input-group">
+                    <input type="password" th:field="*{confirmPassword}" th:classappend="${#fields.hasErrors('confirmPassword') ? 'is-invalid' : ''}" class="form-control" id="confirmPassword" required onkeyup="checkPasswordMatch();"/>
+                    <span class="input-group-text password-toggle-btn"
+                          onclick="togglePasswordVisibility('confirmPassword', this)">
+                        <i class="fa fa-eye-slash"></i>
+                    </span>
+                </div>
+                <!-- END Toggle Input Group -->
                 <div class="text-error" id="passwordMatchError" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
             </div>
         </div>
@@ -185,6 +206,28 @@
     const strengthBar = document.getElementById('password-strength');
     const strengthText = document.getElementById('strength-text');
 
+    // MODIFIED REGEX: Now requires at least one special character (@$!%*?&)
+    const PASSWORD_POLICY_PATTERN = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$");
+
+
+    /**
+     * Toggles the type attribute of the password input between 'password' and 'text'.
+     */
+    function togglePasswordVisibility(inputId, toggleElement) {
+        const input = document.getElementById(inputId);
+        const icon = toggleElement.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    }
+
 
     /**
      * Estimates password strength and updates the feedback meter.
@@ -205,22 +248,26 @@
         // Rule 4: Numbers
         if (/\d/.test(password)) strength++;
 
+        // NEW Rule 5: Special Character
+        if (/[@$!%*?&]/.test(password)) strength++;
+
         // Update meter class and text
+        // Scale 5 rules down to 4 visual levels (0-4)
         strengthBar.className = `password-strength-bar strength-${Math.min(strength, 4)}`;
 
-        if (strength === 0) {
-            strengthText.textContent = 'Enter password.';
+        if (password.length === 0) {
+            strengthText.textContent = 'Minimum 8 chars, with uppercase, lowercase, number, and special character (@$!%*?&).';
             strengthText.style.color = 'gray';
-        } else if (strength < 4) {
-            strengthText.textContent = 'Weak. Needs 8+ chars, uppercase, lowercase, and a number.';
+        } else if (strength < 5) { // Check against 5 required rules
+            strengthText.textContent = 'Weak. Needs 8+ chars, uppercase, lowercase, number, AND a special character.';
             strengthText.style.color = '#ffc107';
-        } else if (strength === 4) {
+        } else if (strength === 5) {
             strengthText.textContent = 'Strong! Matches policy requirements.';
             strengthText.style.color = '#4CAF50';
         }
 
         // Use client-side validation to mark the input as invalid if requirements aren't met
-        if (password.length > 0 && strength < 4) {
+        if (password.length > 0 && !PASSWORD_POLICY_PATTERN.test(password)) {
              // Avoid adding is-invalid if a Thymeleaf error is present, let Thymeleaf handle it
              if (!document.querySelector('#password').classList.contains('is-invalid-server')) {
                 passwordInput.classList.add('is-invalid');
@@ -237,20 +284,22 @@
         const password = passwordInput.value;
         const confirmPassword = confirmPasswordInput.value;
 
-        const confirmGroup = confirmPasswordInput.closest('.col-md-6');
         let errorEl = document.getElementById('passwordMatchError');
-
-        // Check if the server error element is already present and handle it
         const hasServerError = confirmPasswordInput.classList.contains('is-invalid');
 
         if (confirmPassword.length > 0 && password !== confirmPassword) {
-            // Only add client-side validation class if no server validation is present
             if (!hasServerError) {
                 confirmPasswordInput.classList.add('is-invalid');
-                if (errorEl) { errorEl.textContent = 'Passwords do not match.'; }
+                // Ensure error message exists or create it dynamically if it wasn't rendered by Thymeleaf
+                if (!errorEl) {
+                   errorEl = document.createElement('div');
+                   errorEl.className = 'text-error';
+                   errorEl.id = 'passwordMatchError';
+                   confirmPasswordInput.parentNode.parentNode.appendChild(errorEl);
+                }
+                errorEl.textContent = 'Passwords do not match.';
             }
         } else {
-            // Remove client-side invalid class, preserving the server one if present
             if (!hasServerError) {
                 confirmPasswordInput.classList.remove('is-invalid');
                 if (errorEl) { errorEl.textContent = ''; }

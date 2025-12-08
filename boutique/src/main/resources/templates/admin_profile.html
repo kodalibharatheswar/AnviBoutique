@@ -15,6 +15,15 @@
         .profile-card { border-radius: 12px; }
         .main-content { flex-grow: 1; }
 
+        /* New Style for Inline Error */
+        .input-error { color: #dc3545; font-size: 0.85rem; margin-top: 4px; }
+
+        /* New Style for Password Toggle Button */
+        .password-toggle-btn {
+            cursor: pointer;
+            z-index: 100;
+        }
+
         /* --- CUSTOMER NAVBAR STYLE REPLICATION FOR ADMIN (FIX) --- */
         .admin-nav .nav-link{
             color: #fff;
@@ -94,6 +103,9 @@
 <div class="main-content container mt-5">
     <h2 class="mb-4 text-dark">Admin Profile Management</h2>
 
+    <!-- Display message when redirected here -->
+    <div th:if="${forceUpdateMessage}" class="alert alert-warning" role="alert" th:text="${forceUpdateMessage}"></div>
+
     <!-- Success Message from RedirectAttributes (after successful change) -->
     <div th:if="${message}" class="alert alert-success" role="alert" th:text="${message}"></div>
     <!-- Error Message from RedirectAttributes (e.g., username taken) -->
@@ -103,7 +115,7 @@
         <h4 class="card-title mb-4">Update Login Credentials</h4>
 
         <!-- Form submits to AdminController.updateProfile -->
-        <form th:action="@{/admin/updateProfile}" method="post">
+        <form th:action="@{/admin/updateProfile}" method="post" onsubmit="return validatePassword()">
             <div class="mb-3">
                 <label for="currentUsername" class="form-label">Current Username / Email</label>
                 <!-- Display the current username (non-editable field) -->
@@ -116,27 +128,77 @@
                 <label for="newUsername" class="form-label">New Username / Email</label>
                 <input type="text" name="newUsername" id="newUsername" class="form-control" required
                        th:placeholder="'Current: ' + ${currentUsername}">
-                <div class="form-text">This will be your new login ID.</div>
+                <div class="form-text">This will be your new primary login ID (can be email or phone number).</div>
             </div>
 
+            <!-- Recovery Phone Number -->
+            <div class="mb-3">
+                <label for="recoveryPhoneNumber" class="form-label">Recovery Phone Number</label>
+                <input type="tel" name="recoveryPhoneNumber" id="recoveryPhoneNumber" class="form-control" required
+                       th:value="${recoveryPhone}">
+                <div class="form-text text-danger">This number is essential for password recovery if you lose access to your email.</div>
+                <div class="input-error" id="phoneError"></div>
+            </div>
+
+            <!-- New Password Field with Toggle -->
             <div class="mb-3">
                 <label for="newPassword" class="form-label">New Password</label>
-                <input type="password" name="newPassword" id="newPassword" class="form-control" required>
+                <!-- Use input-group for toggle icon -->
+                <div class="input-group">
+                    <input type="password" name="newPassword" id="newPassword" class="form-control" required>
+                    <span class="input-group-text password-toggle-btn"
+                          onclick="togglePasswordVisibility('newPassword', this)">
+                        <i class="fa fa-eye-slash"></i>
+                    </span>
+                </div>
+                <div class="form-text text-muted">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character (@$!%*?&).</div>
+                <div class="input-error" id="newPasswordError"></div>
             </div>
 
+            <!-- Confirm Password Field with Toggle -->
             <div class="mb-3">
                 <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                <input type="password" id="confirmPassword" class="form-control" required>
+                <!-- Use input-group for toggle icon -->
+                <div class="input-group">
+                    <input type="password" id="confirmPassword" class="form-control" required>
+                    <span class="input-group-text password-toggle-btn"
+                          onclick="togglePasswordVisibility('confirmPassword', this)">
+                        <i class="fa fa-eye-slash"></i>
+                    </span>
+                </div>
+                <div class="input-error" id="confirmPasswordError"></div>
             </div>
 
-            <button type="submit" class="btn btn-brand w-100 mt-3" onclick="return validatePassword()">
-                <i class="fa fa-save me-2"></i> Save Changes
+            <button type="submit" class="btn btn-brand w-100 mt-3">
+                <i class="fa fa-save me-2"></i> Save Changes and Log Out
             </button>
         </form>
     </div>
 
     <a th:href="@{/admin/dashboard}" class="btn btn-secondary"><i class="fa fa-arrow-left me-2"></i> Back to Dashboard</a>
 </div>
+
+<!-- Auto-showing Modal for Forced Update -->
+<div class="modal fade" id="forceUpdateModal" tabindex="-1" aria-labelledby="forceUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="forceUpdateModalLabel">
+                    <i class="fa fa-exclamation-triangle me-2"></i> Immediate Action Required
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You are currently logged in with the **default administrator credentials** (`admin`/`password123`).</p>
+                <p class="fw-bold text-danger">For security reasons, you must change your password and username immediately before proceeding to the dashboard.</p>
+            </div>
+            <div class="modal-footer">
+                <a th:href="@{/admin/profile}" class="btn btn-danger w-100">Update Credentials Now</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- FOOTER -->
 <footer class="py-4" style="background-color:var(--dark); color:#fff;">
@@ -155,22 +217,89 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Client-side password matching validation
+
+    // Password complexity regex: Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (@$!%*?&)
+    const PASSWORD_REGEX = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$");
+    const PHONE_REGEX = new RegExp("^[+]?[0-9]{10,15}$");
+
+    /**
+     * Toggles the type attribute of the password input between 'password' and 'text'.
+     * @param {string} inputId The ID of the password input field.
+     * @param {HTMLElement} toggleElement The <span> element containing the icon.
+     */
+    function togglePasswordVisibility(inputId, toggleElement) {
+        const input = document.getElementById(inputId);
+        const icon = toggleElement.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    }
+
+    /**
+     * Performs detailed client-side validation and displays inline errors.
+     * @returns {boolean} True if validation passes, false otherwise.
+     */
     function validatePassword() {
         const newPass = document.getElementById('newPassword').value;
         const confirmPass = document.getElementById('confirmPassword').value;
+        const phone = document.getElementById('recoveryPhoneNumber').value;
 
+        const newPassErrorDiv = document.getElementById('newPasswordError');
+        const confirmPassErrorDiv = document.getElementById('confirmPasswordError');
+        const phoneErrorDiv = document.getElementById('phoneError');
+
+        let isValid = true;
+
+        // --- 1. Reset Errors ---
+        newPassErrorDiv.textContent = "";
+        confirmPassErrorDiv.textContent = "";
+        phoneErrorDiv.textContent = "";
+
+        // --- 2. Validate Phone Number ---
+        if (!PHONE_REGEX.test(phone)) {
+            phoneErrorDiv.textContent = "Error: Please enter a valid recovery phone number (10-15 digits).";
+            isValid = false;
+        }
+
+        // --- 3. Validate New Password Complexity ---
+        if (!PASSWORD_REGEX.test(newPass)) {
+            newPassErrorDiv.textContent = "Error: Password must be 8+ chars, contain uppercase, lowercase, number, and special character.";
+            isValid = false;
+        }
+
+        // --- 4. Validate Password Match ---
         if (newPass !== confirmPass) {
-            // Note: In a real app, replace alert() with a custom modal/error display
-            alert("Error: The new password and confirmation password do not match.");
-            return false;
+            confirmPassErrorDiv.textContent = "Error: Passwords do not match.";
+            isValid = false;
         }
-        if (newPass.length < 6) {
-            alert("Error: Password must be at least 6 characters long.");
-            return false;
-        }
-        return true;
+
+        // --- 5. Final Check ---
+        // We do not need a check for 'newPass === currentPass' here, as that complex check is handled safely on the server side.
+
+        return isValid;
     }
+
+    // Auto-show modal if the 'forceUpdateMessage' is present (meaning admin logged in with default)
+    document.addEventListener('DOMContentLoaded', function() {
+        const forceUpdateMessage = document.querySelector('.alert-warning[th\\:if="${forceUpdateMessage}"]');
+        const modalElement = document.getElementById('forceUpdateModal');
+
+        if (forceUpdateMessage && modalElement) {
+            // Check if the message is actually present (i.e., not a subsequent refresh)
+            const messageText = forceUpdateMessage.textContent.trim();
+            if (messageText.includes("SECURITY ALERT")) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+    });
 </script>
 </body>
 </html>

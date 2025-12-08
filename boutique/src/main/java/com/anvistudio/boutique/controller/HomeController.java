@@ -42,7 +42,8 @@ public class HomeController {
             if (customerOptional.isPresent()) {
                 // Pass full Customer object to the model for first name access
                 model.addAttribute("customer", customerOptional.get());
-            } else {
+            }
+            else {
                 // Fallback username if customer details are missing (e.g., if only User exists)
                 model.addAttribute("username", userDetails.getUsername());
             }
