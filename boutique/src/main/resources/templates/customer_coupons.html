@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Coupons & Offers - Anvi Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root{ --brand:#ff7c04; --dark:#222; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+        .main-content { flex-grow: 1; }
+        .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #000; }
+        .coupon-card {
+            border-radius: 12px;
+            border: 2px dashed #ccc;
+            background-color: white;
+        }
+        .coupon-code {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--brand);
+        }
+        .copy-button {
+            background-color: var(--dark);
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .copy-button:hover { background-color: #333; color: white; }
+
+        /* Ensure Navbar links/colors are consistent */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+        .main-nav{ background:#000; color:#fff; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover, .main-nav .nav-link.active { color: var(--brand); font-weight: 700; border-bottom: 2px solid var(--brand); padding-bottom: 4px; }
+        .navbar-nav { align-items: center; }
+    </style>
+</head>
+<body>
+
+<div th:insert="~{navbar.html :: main-navbar(currentPage='coupons')}"></div>
+
+<div class="main-content container mt-5">
+    <h1 class="hero-title display-5 mb-4"><i class="fa fa-tag me-2"></i> Coupons & Offers</h1>
+    <hr>
+
+    <!-- Messages -->
+    <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+    <div th:if="${#lists.isEmpty(coupons)}" class="alert alert-info text-center p-4">
+        <p class="lead mb-0">No active coupons available right now.</p>
+        <p class="mt-2">Check back soon for new discounts!</p>
+    </div>
+
+    <div class="row g-4 mb-5" th:unless="${#lists.isEmpty(coupons)}">
+        <div class="col-lg-6" th:each="coupon : ${coupons}">
+            <div class="card coupon-card shadow-sm p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="coupon-code" th:text="${coupon.code}">FESTIVE20</span>
+                    <button class="btn btn-sm copy-button" th:attr="data-coupon-code=${coupon.code}" onclick="copyCouponCode(this)">
+                        <i class="fa fa-copy me-1"></i> Copy
+                    </button>
+                </div>
+                <h5 th:text="${coupon.description}">20% off all sarees</h5>
+                <p class="text-muted small mb-2">
+                    <span th:if="${coupon.minPurchaseAmount != null}">Min Purchase: ₹ <span th:text="${#numbers.formatDecimal(coupon.minPurchaseAmount, 0, 'COMMA', 2, 'POINT')}">500.00</span></span>
+                    <span th:unless="${coupon.minPurchaseAmount != null}">No minimum purchase.</span>
+                </p>
+                <p class="text-danger small mb-0">
+                    Expires: <span th:text="${#dates.format(coupon.expirationDate, 'dd MMMM yyyy')}">31 Dec 2025</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{footer.html :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Fallback for copying text (using document.execCommand)
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px"; // Hide off-screen
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert('Coupon code copied: ' + text);
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+        }
+        document.body.removeChild(textArea);
+    }
+
+    // Function to copy the coupon code
+    function copyCouponCode(buttonElement) {
+        const code = buttonElement.getAttribute('data-coupon-code');
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(() => {
+                // Show temporary feedback (replacing alert with custom message box is better practice)
+                alert('Coupon code copied: ' + code);
+            }).catch(err => {
+                fallbackCopyTextToClipboard(code);
+            });
+        } else {
+            fallbackCopyTextToClipboard(code);
+        }
+    }
+</script>
+</body>
+</html>
