@@ -77,6 +77,8 @@ public class SecurityConfig {
                                 "/forgot-password",     // <--- ADDED
                                 "/reset-otp",           // <--- ADDED
                                 "/reset-password",      // <--- ADDED
+                                // NEW: Newsletter Subscription Endpoint MUST be permitted
+                                "/newsletter/subscribe", // <--- ADDED
                                 "/customer/profile/verify-new-email",
                                 "/css/**", "/js/**", "/images/**"
                         ).permitAll()

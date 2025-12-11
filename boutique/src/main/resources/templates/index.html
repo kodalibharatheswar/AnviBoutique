@@ -319,6 +319,16 @@
         <div th:if="${cartMessage}" class="alert alert-success" role="alert" th:text="${cartMessage}"></div>
         <div th:if="${wishlistError}" class="alert alert-danger" role="alert" th:text="${wishlistError}"></div>
         <div th:if="${cartError}" class="alert alert-danger" role="alert" th:text="${cartError}"></div>
+        <!-- NEW: Display general success/error messages (from newsletter) -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
 
         <div class="row g-4">
             <!-- Loop through products provided by HomeController -->
@@ -462,6 +472,492 @@
 </script>
 </body>
 </html>
+
+
+<!-- Full-featured index.html modeled after Anvi Studio - hero slider, categories, new arrivals, best sellers, floating WhatsApp, sticky offer bar, responsive, dots, fade, swipe -->
+<!--<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="utf-8" />
+    <title>Anvi Studio - Ethnic and Fashion Boutique</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    &lt;!&ndash; Bootstrap &ndash;&gt;
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    &lt;!&ndash; Fonts + Icons &ndash;&gt;
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+    <style>
+        :root{
+            &#45;&#45;brand:#ff7c04;
+            &#45;&#45;dark:#222;
+            &#45;&#45;muted:#6c757d;
+        }
+        body { font-family: 'Roboto', sans-serif; color: #222; }
+
+        /* sticky offer bar */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+        .offer-bar a{ color:var(&#45;&#45;brand); text-decoration:none; font-weight:600; }
+
+        /* NAVBAR */
+        .main-nav{ background:#000; color:#fff; }
+        /* *** FIX: Ensure active links are always clearly visible *** */
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover,
+        .main-nav .nav-link.active {
+            color: var(&#45;&#45;brand); /* Active/Hover color */
+            font-weight: 700;    /* Make active link bold */
+            border-bottom: 2px solid var(&#45;&#45;brand); /* Subtle underline for clarity */
+            padding-bottom: 4px;
+        }
+        /* *** END FIX *** */
+
+        /* HERO: fade slider + dots */
+        .hero-banner { position:relative; width:100%; overflow:hidden; }
+        .slides { position:relative; height:100vh; }
+        .slide { position:absolute; inset:0; opacity:0; transition:opacity 1s ease-in-out; }
+        .slide.active{ opacity:1; z-index:2; }
+        .slide img{ width:100%; height:100%; object-fit:cover; display:block; }
+        .slide-overlay{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 100%); }
+        .slide-content{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; color:#fff; z-index:3; max-width:900px; padding:30px; }
+        .slide-content h1{ font-family:'Playfair Display',serif; font-size:3.6rem; margin-bottom:18px; letter-spacing:0.8px; }
+        .slide-content p.lead{ font-size:1.05rem; margin-bottom:22px; color:#f6f6f6; opacity:0.95; }
+        .btn-cta{ background:var(&#45;&#45;brand); border:none; padding:12px 30px; font-size:1.05rem; border-radius:6px; }
+
+        /* nav arrows */
+        .hero-arrow{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:#fff; border:none; width:48px; height:48px; border-radius:6px; font-size:1.4rem; z-index:10; }
+        .hero-arrow.left{ left:20px; }
+        .hero-arrow.right{ right:20px; }
+
+        /* dots */
+        .slider-dots{ position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:12; }
+        .slider-dots button{ width:12px; height:12px; border-radius:50%; border:none; background:rgba(255,255,255,0.6); cursor:pointer; }
+        .slider-dots button.active{ background:var(&#45;&#45;brand); }
+
+        /* -&#45;&#45; NEW CATEGORY CARD STYLES (Expanded) -&#45;&#45; */
+        .category-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 30px;
+            height: 150px; /* Uniform height for visual balance */
+            border-radius: 12px;
+            transition: transform .3s, box-shadow .3s;
+            color: #fff; /* White text over colored backgrounds */
+            font-family: 'Playfair Display', serif;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none !important; /* Ensure text remains white and undecorated */
+        }
+        .category-card:hover {
+            transform: scale(1.02); /* Slight lift on hover */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            color: #fff;
+        }
+        .category-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            z-index: 2;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .category-image {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%) scale(1.1);
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6; /* Slight transparency to make text legible */
+            transition: transform 0.3s;
+        }
+        .category-card:hover .category-image {
+            transform: translateY(-50%) scale(1.15);
+        }
+        /* -&#45;&#45; END NEW CATEGORY CARD STYLES -&#45;&#45; */
+
+        /* Product Card for Product Grid Section */
+        .product-card{ border-radius:12px; overflow:hidden; border:1px solid #eee; position: relative;} /* Added position: relative */
+        .product-card .card-img-top{ height:300px; object-fit:cover; }
+        .btn-brand { background-color: var(&#45;&#45;brand); border-color: var(&#45;&#45;brand); color: white; }
+        .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
+
+        /* Price Discount Styles */
+        .original-price { text-decoration: line-through; color: #888; font-size: 0.75em; margin-right: 5px; }
+        .discount-badge { font-size: 0.7em; margin-left: 5px; }
+
+        /* NEW: Sale/Clearance Status Badge */
+        .sale-status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .sale-badge { background-color: #007bff; color: white; } /* Blue/Regular Sale */
+        .clearance-badge { background-color: #dc3545; color: white; } /* Red/Clearance Sale */
+
+
+        /* floating whatsapp */
+        .whatsapp-float{ position:fixed; right:18px; bottom:18px; background:#25D366; width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.6rem; z-index:999; box-shadow:0 8px 20px rgba(0,0,0,0.2); }
+
+        /* responsive tweaks */
+        @media(max-width:992px){ .slide-content h1{ font-size:2.4rem; } .slide-content p.lead{ font-size:1rem; } }
+        @media(max-width:576px){ .slide-content{ padding:18px; } .slide-content h1{ font-size:1.6rem; } .slide-content p.lead{ display:none; } .category-text{ font-size:1.2rem; } .category-card{ height:100px; padding:15px; } }
+
+        /* FIX FOR ICON ALIGNMENT: Ensures icons are displayed inline with links */
+        .navbar-nav { align-items: center; }
+
+        /* New: Make the whole card clickable and remove default link underline */
+        .product-card a {
+            text-decoration: none;
+            color: inherit;
+            display: contents; /* Allows nested elements to layout as normal */
+        }
+        .product-link-wrapper {
+            position: absolute;
+            inset: 0;
+            z-index: 5; /* Above content but below buttons */
+        }
+        /* Specific Z-index for buttons so they remain clickable */
+        .btn-group, .btn-dark {
+             position: relative;
+             z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+&lt;!&ndash; INCLUDE REUSABLE NAVBAR FRAGMENT &ndash;&gt;
+<div th:insert="~{navbar.html :: main-navbar(currentPage='home')}"></div>
+
+&lt;!&ndash; HERO SLIDER &ndash;&gt;
+<section class="hero-banner" aria-label="Hero">
+    <div class="slides">
+
+        <div class="slide active" data-index="0">
+            <img th:src="@{/images/licensed-image.png}" alt="Long Frocks">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Long Frocks</h1>
+                <p class="lead">Breezy long frocks crafted with premium fabrics — perfect for every occasion.</p>
+                <a class="btn btn-cta" th:href="@{/products(category='Long Frocks')}">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="1">
+            <img th:src="@{/images/licensed-image1.jpg}" alt="Ready To Wear">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Ready To Wear</h1>
+                <p class="lead">Classic ready-to-wear pieces updated with modern cuts.</p>
+                <a class="btn btn-cta" th:href="@{/products(category='Ready To Wear')}">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="2">
+            <img th:src="@{/images/licensed-image2.jpg}" alt="Kidswear">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Kidswear</h1>
+                <p class="lead">Comfortable, colorful and adorable styles for the little ones.</p>
+                <a class="btn btn-cta" th:href="@{/products(category='Kids wear')}">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="3">
+            <img th:src="@{/images/licensed-image3.png}" alt="Lehengas">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Lehengas</h1>
+                <p class="lead">Handpicked lehengas for weddings and festive celebrations.</p>
+                <a class="btn btn-cta" th:href="@{/products(category='Lehengas')}">SHOP NOW</a>
+            </div>
+        </div>
+
+        <div class="slide" data-index="4">
+            <img th:src="@{/images/licensed-image4.jpg}" alt="Handlooms">
+            <div class="slide-overlay"></div>
+            <div class="slide-content">
+                <h1>Handlooms</h1>
+                <p class="lead">Authentic handloom pieces woven by skilled artisans.</p>
+                <a class="btn btn-cta" th:href="@{/products(category='Handlooms')}">SHOP NOW</a>
+            </div>
+        </div>
+
+    </div>
+
+    &lt;!&ndash; arrows &ndash;&gt;
+    <button class="hero-arrow left" aria-label="Previous slide">&#10094;</button>
+    <button class="hero-arrow right" aria-label="Next slide">&#10095;</button>
+
+    &lt;!&ndash; dots &ndash;&gt;
+    <div class="slider-dots" role="tablist"></div>
+</section>
+
+&lt;!&ndash; CATEGORIES (shop by category) - UPDATED WITH EXTENDED LIST &ndash;&gt;
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5 hero-title">Shop By Category</h2>
+        <div class="row g-4">
+
+            &lt;!&ndash; Row 1: 3 Categories &ndash;&gt;
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Sarees')}" class="category-card shadow" style="background-color: #7B3F00;">
+                    <span class="category-text">Sarees</span>
+                    <img th:src="@{/images/shopcategory/sarees.png}" alt="Sarees" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Lehengas')}" class="category-card shadow" style="background-color: #B22222;">
+                    <span class="category-text">Lehengas</span>
+                    <img th:src="@{/images/shopcategory/lehengas.png}" alt="Lehengas" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Kurtis')}" class="category-card shadow" style="background-color: #800080;">
+                    <span class="category-text">Kurtis & Suits</span>
+                    <img th:src="@{/images/shopcategory/kurthi&suits.png}" alt="Kurtis & Suits" class="category-image">
+                </a>
+            </div>
+
+            &lt;!&ndash; Row 2: 3 Categories &ndash;&gt;
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Long Frocks')}" class="category-card shadow" style="background-color: #4A90E2;">
+                    <span class="category-text">Long Frocks</span>
+                    <img th:src="@{/images/shopcategory/longfrock.png}" alt="Long Frocks" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Ready To Wear')}" class="category-card shadow" style="background-color: #D0021B;">
+                    <span class="category-text">Ready To Wear</span>
+                    <img th:src="@{/images/shopcategory/readymate.png}" alt="Ready To Wear" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Kids wear')}" class="category-card shadow" style="background-color: #50E3C2;">
+                    <span class="category-text">Kids wear</span>
+                    <img th:src="@{/images/shopcategory/kidswear.png}" alt="Kids wear" class="category-image">
+                </a>
+            </div>
+
+            &lt;!&ndash; Row 3: 3 Categories (Mom & Me, Dupattas, Blouses) &ndash;&gt;
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Mom & Me')}" class="category-card shadow" style="background-color: #703B3B;">
+                    <span class="category-text">Mom & Me</span>
+                    <img th:src="@{/images/shopcategory/Mom-Me.png}" alt="Mom & Me" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Dupattas')}" class="category-card shadow" style="background-color: #7ED321;">
+                    <span class="category-text">Dupattas</span>
+                    <img th:src="@{/images/shopcategory/Dupatta.png}" alt="Dupattas" class="category-image">
+                </a>
+            </div>
+
+            <div class="col-sm-6 col-md-4">
+                <a th:href="@{/products(category='Blouses')}" class="category-card shadow" style="background-color: #9013FE;">
+                    <span class="category-text">Blouses</span>
+                    <img th:src="@{/images/shopcategory/Blouses.png}" alt="Blouses" class="category-image">
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
+&lt;!&ndash; END CATEGORIES &ndash;&gt;
+
+
+&lt;!&ndash; NEW DYNAMIC PRODUCT GRID (Replacing the static "New Arrivals" and "Best Sellers" sections) &ndash;&gt;
+<section class="py-5 bg-light">
+    <div class="container">
+        &lt;!&ndash; Optional Welcome Message for Authenticated Users &ndash;&gt;
+        <h2 class="text-center mb-4" sec:authorize="isAuthenticated()">
+            <span th:if="${customer != null}" th:text="'Welcome Back, ' + ${customer.firstName} + '!'">Welcome Back!</span>
+            <span th:unless="${customer != null}" th:text="'Welcome Back!'">Welcome Back!</span>
+        </h2>
+        <h3 class="mb-4">Featured Products <small class="text-muted">(Latest Arrivals)</small></h3>
+
+        &lt;!&ndash; Flash Messages (for cart/wishlist actions, passed via RedirectAttributes) &ndash;&gt;
+        <div th:if="${wishlistMessage}" class="alert alert-success" role="alert" th:text="${wishlistMessage}"></div>
+        <div th:if="${cartMessage}" class="alert alert-success" role="alert" th:text="${cartMessage}"></div>
+        <div th:if="${wishlistError}" class="alert alert-danger" role="alert" th:text="${wishlistError}"></div>
+        <div th:if="${cartError}" class="alert alert-danger" role="alert" th:text="${cartError}"></div>
+
+        <div class="row g-4">
+            &lt;!&ndash; Loop through products provided by HomeController &ndash;&gt;
+            <div class="col-sm-6 col-md-4 col-lg-3" th:each="p : ${products}">
+                <div class="card product-card shadow-sm h-100">
+
+                    &lt;!&ndash; NEW: SALE/CLEARANCE BADGE &ndash;&gt;
+                    <span th:if="${p.isClearance()}" class="sale-status-badge clearance-badge">CLEARANCE!</span>
+                    <span th:unless="${p.isClearance() or p.discountPercent == 0}" class="sale-status-badge sale-badge">SALE</span>
+
+                    &lt;!&ndash; PRODUCT LINK WRAPPER (Now wraps image and details, but excludes action buttons) &ndash;&gt;
+                    <a th:href="@{'/products/' + ${p.id}}" class="product-link-wrapper">
+                        <div style="position: absolute; inset: 0; bottom: 120px;"></div> &lt;!&ndash; Covers image area and title/price area &ndash;&gt;
+                    </a>
+
+                    &lt;!&ndash; Product Image &ndash;&gt;
+                    <img th:src="${p.imageUrl != null ? p.imageUrl : 'https://placehold.co/600x600/ccc/333?text=No+Image'}"
+                         onerror="this.onerror=null; this.src='https://placehold.co/600x600/ccc/333?text=Error+Loading';"
+                         class="card-img-top"
+                         alt="Product Image">
+
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title" th:text="${p.name}">Product Name</h5>
+                        <p class="text-muted small mb-2" th:text="${p.category}"></p>
+
+                        &lt;!&ndash; Price Display Logic (Updated for Discount) &ndash;&gt;
+                        <p class="card-text fw-bold fs-5 mt-auto">
+                            <span th:if="${p.discountPercent > 0}" class="text-secondary d-block">
+                                <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                                <span class="badge bg-danger discount-badge" th:text="'-' + ${p.discountPercent} + '%'">-10%</span>
+                                <br>
+                                <span class="text-success">₹ <span th:text="${#numbers.formatDecimal(p.getDiscountedPrice(), 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                            </span>
+                            <span th:unless="${p.discountPercent > 0}" class="text-success">
+                                ₹ <span th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                            </span>
+                        </p>
+
+                        <p class="card-text text-muted small">
+                            Stock: <span th:text="${p.stockQuantity}">0</span>
+                        </p>
+
+                        &lt;!&ndash; Actions for Authenticated Users (Cart/Wishlist) - Keep these separate and above the link wrapper z-index&ndash;&gt;
+                        <div class="mt-2 btn-group" role="group" sec:authorize="isAuthenticated()">
+                            &lt;!&ndash; 1. ADD TO CART Button (POSTs to CartController) &ndash;&gt;
+                            <form th:action="@{/cart/add}" method="post" class="d-inline w-50">
+                                <input type="hidden" name="productId" th:value="${p.id}">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-brand w-100 btn-sm" th:disabled="${p.stockQuantity == 0}">
+                                    <i class="fa fa-shopping-bag me-1"></i> Cart
+                                </button>
+                            </form>
+
+                            &lt;!&ndash; 2. ADD TO WISHLIST Button (POSTs to WishlistController) &ndash;&gt;
+                            <form th:action="@{/wishlist/add/{productId}(productId=${p.id})}" method="post" class="d-inline w-50">
+                                <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
+                                    <i class="fa-regular fa-heart"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                        &lt;!&ndash; REMOVED: View Details button &ndash;&gt;
+                        &lt;!&ndash; <a th:href="@{'/products/' + ${p.id}}" th:classappend="${#authentication.name} == 'anonymousUser' ? 'w-100' : ''" class="btn btn-dark btn-sm mt-2">View Details</a> &ndash;&gt;
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(products)}" class="alert alert-info mt-5 text-center">
+            No products available at the moment.
+        </div>
+    </div>
+</section>
+&lt;!&ndash; END NEW DYNAMIC PRODUCT GRID &ndash;&gt;
+
+&lt;!&ndash; FLOATING WHATSAPP &ndash;&gt;
+<a class="whatsapp-float" href="https://wa.me/919490334557" target="_blank" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>
+
+&lt;!&ndash; Include the centralized footer fragment &ndash;&gt;
+<div th:replace="~{footer.html :: footer}"></div>
+
+&lt;!&ndash; Scripts &ndash;&gt;
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // FIX: Wrap initialization in DOMContentLoaded to ensure elements exist before listeners are attached.
+    document.addEventListener('DOMContentLoaded', function() {
+        (function(){
+            const slides = document.querySelectorAll('.slide');
+            const left = document.querySelector('.hero-arrow.left');
+            const right = document.querySelector('.hero-arrow.right');
+            const dotsWrap = document.querySelector('.slider-dots');
+            let idx = 0, timer;
+
+            // Check if essential elements were found before proceeding
+            if (!slides.length || !left || !right || !dotsWrap) {
+                console.warn('Hero slider elements not found, skipping JS initialization.');
+                return;
+            }
+
+            function createDots(){
+                slides.forEach((s,i)=>{
+                    const btn = document.createElement('button');
+                    btn.setAttribute('aria-label','Go to slide '+(i+1));
+                    btn.addEventListener('click',()=>{ goTo(i); });
+                    dotsWrap.appendChild(btn);
+                });
+                dotsWrap.children[0].classList.add('active');
+            }
+
+            function setActive(){
+                slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+                Array.from(dotsWrap.children).forEach((d,i)=> d.classList.toggle('active', i===idx));
+            }
+
+            function goTo(i){ idx = i; setActive(); resetTimer(); }
+            function next(){ idx = (idx+1)%slides.length; setActive(); }
+            function prev(){ idx = (idx-1+slides.length)%slides.length; setActive(); }
+
+            left.addEventListener('click', ()=>{ prev(); resetTimer(); });
+            right.addEventListener('click', ()=>{ next(); resetTimer(); });
+
+            // swipe support
+            let startX=0, endX=0;
+            const threshold = 50;
+            const slidesArea = document.querySelector('.slides');
+            slidesArea.addEventListener('touchstart', e=>{ startX = e.touches[0].clientX; });
+            slidesArea.addEventListener('touchmove', e=>{ endX = e.touches[0].clientX; });
+            slidesArea.addEventListener('touchend', ()=>{
+                if(!endX) return;
+                const diff = startX - endX;
+                if(Math.abs(diff) > threshold){ if(diff>0) next(); else prev(); }
+                startX=0; endX=0; resetTimer();
+            });
+
+            function resetTimer(){ clearInterval(timer); timer = setInterval(next,5000); }
+
+            // init
+            createDots(); setActive(); resetTimer();
+        })();
+    });
+</script>
+</body>
+</html>-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -120,6 +120,7 @@
                         </div>
                         <div class="col-12 mt-3">
                             <div class="form-check">
+                                <!-- CRITICAL FIX: Ensure th:field works to save the boolean preference -->
                                 <input type="checkbox" th:field="*{newsletterOptIn}" class="form-check-input" id="newsletterOptIn">
                                 <label class="form-check-label" for="newsletterOptIn">
                                     Sign up for the Anvi Studio newsletter (exclusive offers).
@@ -210,8 +211,30 @@
                     <i class="fa fa-envelope me-2"></i> Securely Change Email
                 </button>
 
+                <!-- Dedicated Newsletter Management Link for Registered Users (NEW) -->
+                <p class="small mt-3 text-muted">
+                    Newsletter Status:
+                    <span th:if="${customer.newsletterOptIn}" class="text-success fw-bold">Subscribed</span>
+                    <span th:unless="${customer.newsletterOptIn}" class="text-danger fw-bold">Unsubscribed</span>
+                </p>
+                <form th:action="@{/customer/profile/update-newsletter}" method="post">
+                    <!-- Toggle button (Submits opposite of current status) -->
+                    <button type="submit" class="btn w-100"
+                            th:classappend="${customer.newsletterOptIn} ? 'btn-outline-danger' : 'btn-success'"
+                            th:name="optIn"
+                            th:value="${!customer.newsletterOptIn}">
+                        <span th:if="${customer.newsletterOptIn}">
+                            <i class="fa fa-times-circle me-1"></i> Click to Unsubscribe
+                        </span>
+                        <span th:unless="${customer.newsletterOptIn}">
+                            <i class="fa fa-check-circle me-1"></i> Click to Subscribe Now
+                        </span>
+                    </button>
+                </form>
+
+
                 <!-- Placeholder for other links -->
-                <a th:href="@{/wishlist}" class="btn btn-outline-secondary w-100 mb-2">
+                <a th:href="@{/wishlist}" class="btn btn-outline-secondary w-100 mt-3 mb-2">
                     <i class="fa fa-heart me-2"></i> View My Wishlist
                 </a>
                 <a th:href="@{/cart}" class="btn btn-outline-secondary w-100">
@@ -419,3 +442,429 @@
 </script>
 </body>
 </html>
+
+
+
+
+<!--
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>My Profile - Anvi Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root{ &#45;&#45;brand:#ff7c04; &#45;&#45;dark:#222; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+        .main-content { flex-grow: 1; }
+        .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #000; }
+        .card-title { font-weight: 700; color: var(&#45;&#45;dark); }
+        .profile-card { border-radius: 12px; }
+        .btn-brand { background-color: var(&#45;&#45;brand); border-color: var(&#45;&#45;brand); color: white; }
+        .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
+        .btn-outline-brand { border-color: var(&#45;&#45;brand); color: var(&#45;&#45;brand); }
+        .btn-outline-brand:hover { background-color: var(&#45;&#45;brand); color: white; }
+
+        /* Styles copied from admin_profile.html for consistency */
+        .text-error { color: #dc3545; font-size: 0.85rem; margin-top: 5px; }
+        .password-strength-bar { height: 8px; border-radius: 4px; transition: width 0.3s ease; }
+        .strength-0 { width: 0%; background-color: #eee; }
+        .strength-1 { width: 25%; background-color: #ffc107; }
+        .strength-2 { width: 50%; background-color: #ff9800; }
+        .strength-3 { width: 75%; background-color: #4CAF50; }
+        .strength-4 { width: 100%; background-color: #007bff; }
+        .password-toggle-btn {
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        /* Ensure Navbar links/colors are consistent */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+        .main-nav{ background:#000; color:#fff; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover, .main-nav .nav-link.active { color: var(&#45;&#45;brand); font-weight: 700; border-bottom: 2px solid var(&#45;&#45;brand); padding-bottom: 4px; }
+        .navbar-nav { align-items: center; }
+    </style>
+</head>
+<body>
+
+&lt;!&ndash; INCLUDE REUSABLE NAVBAR FRAGMENT (Passing 'home' as active page since there's no dedicated 'profile' link yet) &ndash;&gt;
+<div th:insert="~{navbar.html :: main-navbar(currentPage='home')}"></div>
+
+<div class="main-content container mt-5">
+    <h1 class="hero-title display-5 mb-4">Welcome, <span th:text="${profileDTO.firstName}">Customer</span></h1>
+    <h2 class="h4 text-muted mb-4">Manage Your Account Profile</h2>
+    <hr>
+
+    &lt;!&ndash; Success/Error Messages &ndash;&gt;
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${emailChangeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${emailChangeError}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="row g-4 mb-5">
+
+        &lt;!&ndash; Column 1: Personal Details Update &ndash;&gt;
+        <div class="col-lg-7">
+            <div class="card profile-card shadow-sm p-4">
+                <h5 class="card-title mb-4"><i class="fa fa-user-edit me-2"></i> Personal Details</h5>
+                &lt;!&ndash; Form posts to /customer/profile/update &ndash;&gt;
+                <form th:action="@{/customer/profile/update}" th:object="${profileDTO}" method="post">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <input type="text" th:field="*{firstName}" class="form-control" id="firstName" required/>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <input type="text" th:field="*{lastName}" class="form-control" id="lastName" required/>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Login Email (Username)</label>
+                            <input type="email" th:value="${currentEmail}" class="form-control" id="username" disabled/>
+                            <div class="form-text text-danger small">
+                                Email cannot be changed here. Use the 'Change Email' button.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phoneNumber" class="form-label">Phone Number</label>
+                            <input type="tel" th:field="*{phoneNumber}" class="form-control" id="phoneNumber" required/>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="preferredSize" class="form-label">Preferred Size</label>
+                            <select th:field="*{preferredSize}" class="form-select" id="preferredSize">
+                                <option value="">Select (Optional)</option>
+                                <option value="XS">XS</option>
+                                <option value="S">S</option>
+                                <option value="M">M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                                <option value="XXL">XXL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select th:field="*{gender}" class="form-select" id="gender">
+                                <option value="">Select (Optional)</option>
+                                <option value="FEMALE">Female</option>
+                                <option value="MALE">Male</option>
+                                <option value="UNISEX">Unisex</option>
+                                <option value="OTHER">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                            <input type="date" th:field="*{dateOfBirth}" class="form-control" id="dateOfBirth" />
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check">
+                                <input type="checkbox" th:field="*{newsletterOptIn}" class="form-check-input" id="newsletterOptIn">
+                                <label class="form-check-label" for="newsletterOptIn">
+                                    Sign up for the Anvi Studio newsletter (exclusive offers).
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12 mt-4">
+                            <button type="submit" class="btn btn-brand w-100">
+                                <i class="fa fa-save me-2"></i> Save Details
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        &lt;!&ndash; Column 2: Security & Actions &ndash;&gt;
+        <div class="col-lg-5">
+
+            &lt;!&ndash; Card 2: Change Password &ndash;&gt;
+            <div class="card profile-card shadow-sm p-4 mb-4">
+                <h5 class="card-title mb-4"><i class="fa fa-lock me-2"></i> Change Password</h5>
+                <div th:if="${passwordError}" class="alert alert-danger" role="alert" th:text="${passwordError}"></div>
+
+                <form th:action="@{/customer/profile/change-password}" method="post" onsubmit="return validatePasswordChange()">
+
+                    &lt;!&ndash; Current Password Field with Toggle &ndash;&gt;
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <div class="input-group">
+                            <input type="password" name="currentPassword" id="currentPassword" class="form-control" required/>
+                            <span class="input-group-text password-toggle-btn"
+                                  onclick="togglePasswordVisibility('currentPassword', this)">
+                                <i class="fa fa-eye-slash"></i>
+                            </span>
+                        </div>
+                        <div class="text-error" id="currentPasswordError"></div>
+                    </div>
+
+                    &lt;!&ndash; New Password Field with Toggle &ndash;&gt;
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <div class="input-group">
+                            <input type="password" name="newPassword" id="newPassword" class="form-control" required onkeyup="checkPasswordStrength();"/>
+                            <span class="input-group-text password-toggle-btn"
+                                  onclick="togglePasswordVisibility('newPassword', this)">
+                                <i class="fa fa-eye-slash"></i>
+                            </span>
+                        </div>
+                        <div class="mt-1">
+                            <div id="password-strength" class="password-strength-bar strength-0"></div>
+                            &lt;!&ndash; MODIFIED MESSAGE &ndash;&gt;
+                            <small class="form-text text-muted" id="strength-text">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, and 1 special character (@$!%*?&).</small>
+                        </div>
+                        <div class="text-error" id="newPasswordError"></div>
+                    </div>
+
+                    &lt;!&ndash; Confirm Password Field with Toggle &ndash;&gt;
+                    <div class="mb-4">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <div class="input-group">
+                            <input type="password" name="confirmPassword" id="confirmPassword" class="form-control" required/>
+                            <span class="input-group-text password-toggle-btn"
+                                  onclick="togglePasswordVisibility('confirmPassword', this)">
+                                <i class="fa fa-eye-slash"></i>
+                            </span>
+                        </div>
+                        <div class="text-error" id="passwordMatchError"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100">
+                        <i class="fa fa-key me-2"></i> Update Password
+                    </button>
+                </form>
+            </div>
+
+            &lt;!&ndash; Card 3: Account Actions &ndash;&gt;
+            <div class="card profile-card shadow-sm p-4">
+                <h5 class="card-title mb-4"><i class="fa fa-id-card me-2"></i> Account Actions</h5>
+
+                &lt;!&ndash; Email Change Flow &ndash;&gt;
+                <p class="small text-muted mb-3">
+                    Your primary login is tied to your verified email address:
+                    <strong th:text="${currentEmail}"></strong>
+                </p>
+                &lt;!&ndash; UPDATED BUTTON to launch modal &ndash;&gt;
+                <button type="button" class="btn btn-outline-brand w-100 mb-3" data-bs-toggle="modal" data-bs-target="#changeEmailModal">
+                    <i class="fa fa-envelope me-2"></i> Securely Change Email
+                </button>
+
+                &lt;!&ndash; Placeholder for other links &ndash;&gt;
+                <a th:href="@{/wishlist}" class="btn btn-outline-secondary w-100 mb-2">
+                    <i class="fa fa-heart me-2"></i> View My Wishlist
+                </a>
+                <a th:href="@{/cart}" class="btn btn-outline-secondary w-100">
+                    <i class="fa fa-shopping-cart me-2"></i> View My Cart
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+&lt;!&ndash; NEW: Change Email Modal &ndash;&gt;
+<div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="changeEmailModalLabel"><i class="fa fa-envelope-open-text me-2"></i> Change Login Email</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            &lt;!&ndash; The form submits to the server, and the server redirects on success &ndash;&gt;
+            <form th:action="@{/customer/profile/change-email/initiate}" method="post" id="initiateEmailChangeForm">
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        To maintain security, we will send a verification code (OTP) to your new email address.
+                        Your account will remain logged in with your current email until verification is complete.
+                    </p>
+                    <div class="mb-3">
+                        <label for="newEmail" class="form-label">New Email Address</label>
+                        <input type="email" id="newEmail" name="newEmail" class="form-control" required
+                               placeholder="new.email@example.com"
+                               th:attr="data-current-email=${currentEmail}"/>
+                        <div class="text-error small mt-1" id="newEmailError"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    &lt;!&ndash; Button runs client-side validation before submitting the form &ndash;&gt;
+                    <button type="submit" class="btn btn-brand" onclick="return validateNewEmail()">
+                        <i class="fa fa-paper-plane me-2"></i> Send Verification Code
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+&lt;!&ndash; Include the centralized footer fragment &ndash;&gt;
+<div th:replace="~{footer.html :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const currentPasswordInput = document.getElementById('currentPassword');
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const strengthBar = document.getElementById('password-strength');
+    const strengthText = document.getElementById('strength-text');
+
+    // Password complexity regex: Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (@$!%*?&)
+    const PASSWORD_POLICY_PATTERN = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$");
+
+
+    /**
+     * Toggles the type attribute of the password input between 'password' and 'text'.
+     */
+    function togglePasswordVisibility(inputId, toggleElement) {
+        const input = document.getElementById(inputId);
+        const icon = toggleElement.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    }
+
+    /**
+     * Estimates password strength and updates the feedback meter.
+     */
+    function checkPasswordStrength() {
+        if (!newPasswordInput) return;
+
+        const password = newPasswordInput.value;
+        let strength = 0;
+
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/\d/.test(password)) strength++;
+        if (/[@$!%*?&]/.test(password)) strength++;
+
+        strengthBar.className = `password-strength-bar strength-${Math.min(strength, 4)}`;
+
+        if (password.length === 0) {
+            strengthText.textContent = 'Min 8 chars, 1 uppercase, 1 lowercase, 1 number, and 1 special character (@$!%*?&).';
+            strengthText.style.color = 'gray';
+        } else if (strength < 5) {
+            strengthText.textContent = 'Weak. Needs 8+ chars, uppercase, lowercase, number, AND a special character.';
+            strengthText.style.color = '#ffc107';
+        } else if (strength === 5) {
+            strengthText.textContent = 'Strong! Matches policy requirements.';
+            strengthText.style.color = '#4CAF50';
+        }
+    }
+
+    /**
+     * Performs detailed client-side validation and displays inline errors for password change.
+     * @returns {boolean} True if validation passes, false otherwise.
+     */
+    function validatePasswordChange() {
+        const currentPass = currentPasswordInput.value;
+        const newPass = newPasswordInput.value;
+        const confirmPass = confirmPasswordInput.value;
+
+        const currentPassErrorDiv = document.getElementById('currentPasswordError');
+        const newPassErrorDiv = document.getElementById('newPasswordError');
+        const passwordMatchError = document.getElementById('passwordMatchError');
+
+        let isValid = true;
+
+        // -&#45;&#45; 1. Reset Errors -&#45;&#45;
+        currentPassErrorDiv.textContent = "";
+        newPassErrorDiv.textContent = "";
+        passwordMatchError.textContent = "";
+
+        if (!currentPass) {
+            currentPassErrorDiv.textContent = "Current password is required.";
+            isValid = false;
+        }
+
+        // -&#45;&#45; 2. Validate New Password Complexity -&#45;&#45;
+        if (!PASSWORD_POLICY_PATTERN.test(newPass)) {
+            newPassErrorDiv.textContent = "Error: Password must meet complexity requirements.";
+            isValid = false;
+        }
+
+        // -&#45;&#45; 3. Validate Password Match -&#45;&#45;
+        if (newPass !== confirmPass) {
+            passwordMatchError.textContent = "Error: New passwords do not match.";
+            isValid = false;
+        }
+
+        // Optional: Client-side check that new password isn't identical to current. Server handles this securely.
+        if (currentPass === newPass && newPass.length > 0) {
+            newPassErrorDiv.textContent = "Error: New password cannot be the same as current password.";
+            isValid = false;
+        }
+
+
+        return isValid;
+    }
+
+    /**
+     * Client-side validation for the new email address submission in the modal.
+     */
+    function validateNewEmail() {
+        const newEmailInput = document.getElementById('newEmail');
+        const newEmail = newEmailInput.value.trim();
+        const currentEmail = newEmailInput.getAttribute('data-current-email').trim();
+        const errorDiv = document.getElementById('newEmailError');
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        errorDiv.textContent = "";
+
+        if (!newEmail) {
+            errorDiv.textContent = "New email address is required.";
+            return false;
+        }
+
+        if (!emailRegex.test(newEmail)) {
+            errorDiv.textContent = "Please enter a valid email address.";
+            return false;
+        }
+
+        if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
+            errorDiv.textContent = "The new email must be different from your current email.";
+            return false;
+        }
+
+        return true;
+    }
+
+    // Attach listeners for strength/match checks
+    document.addEventListener('DOMContentLoaded', () => {
+        if (newPasswordInput) {
+            newPasswordInput.addEventListener('keyup', checkPasswordStrength);
+            confirmPasswordInput.addEventListener('keyup', validatePasswordChange);
+            currentPasswordInput.addEventListener('keyup', validatePasswordChange); // Check current pass field on keyup
+            checkPasswordStrength();
+        }
+
+        const emailModal = document.getElementById('changeEmailModal');
+        if (emailModal) {
+            emailModal.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('newEmailError').textContent = "";
+                document.getElementById('newEmail').value = "";
+            });
+        }
+    });
+
+</script>
+</body>
+</html>-->
