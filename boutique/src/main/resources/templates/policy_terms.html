@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Terms & Conditions | Anvi Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --brand:#ff7c04; --dark:#222; }
+    body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+    .main-content { flex-grow: 1; padding-top: 40px; padding-bottom: 40px; }
+    h1, h2 { color: var(--dark); font-weight: 700; margin-bottom: 20px; }
+    section { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+
+    /* --- NAVBAR STYLES FIX --- */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+        .main-nav{ background:#000; color:#fff; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover,
+        .main-nav .nav-link.active {
+            color: var(--brand);
+            font-weight: 700;
+            border-bottom: 2px solid var(--brand);
+            padding-bottom: 4px;
+        }
+        .navbar-nav { align-items: center; }
+        /* --- END NAVBAR STYLES FIX --- */
+  </style>
+</head>
+<body>
+
+<div th:insert="~{navbar.html :: main-navbar(currentPage='policies')}"></div>
+
+<div class="main-content container mt-5">
+  <h1>Anvi Studio Terms & Conditions</h1>
+
+  <section>
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using the Anvi Studio website (the "Service"), you agree to be bound by these Terms and Conditions. If you disagree with any part of the terms, then you may not access the Service.</p>
+  </section>
+
+  <section>
+    <h2>2. Products and Services</h2>
+    <p>All descriptions of products or product pricing are subject to change at anytime without notice. We reserve the right to discontinue any product at any time. We make every effort to display the colors and images of our products as accurately as possible, but we cannot guarantee that your device's display accurately reflects the true color.</p>
+  </section>
+
+  <section>
+    <h2>3. User Accounts</h2>
+    <p>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your computer. You agree to accept responsibility for all activities that occur under your account or password.</p>
+  </section>
+
+  <a th:href="@{/}" class="btn btn-secondary"><i class="fa fa-arrow-left me-2"></i> Back to Homepage</a>
+</div>
+
+<div th:replace="~{footer.html :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

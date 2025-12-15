@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Shipping Policy | Anvi Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root{ --brand:#ff7c04; --dark:#222; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+        .main-content { flex-grow: 1; padding-top: 40px; padding-bottom: 40px; }
+        h1, h2 { color: var(--dark); font-weight: 700; margin-bottom: 20px; }
+        section { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+
+        /* --- NAVBAR STYLES FIX --- */
+        .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+        .main-nav{ background:#000; color:#fff; }
+        .main-nav .nav-link{ color:#fff; }
+        .main-nav .nav-link:hover,
+        .main-nav .nav-link.active {
+            color: var(--brand);
+            font-weight: 700;
+            border-bottom: 2px solid var(--brand);
+            padding-bottom: 4px;
+        }
+        .navbar-nav { align-items: center; }
+        /* --- END NAVBAR STYLES FIX --- */
+    </style>
+</head>
+<body>
+
+<div th:insert="~{navbar.html :: main-navbar(currentPage='policies')}"></div>
+
+<div class="main-content container mt-5">
+    <h1>Anvi Studio Shipping Policy</h1>
+
+    <section>
+        <h2>1. Processing Time</h2>
+        <p>Order processing time typically takes 1-3 business days. This does not include the time required for customization or stitching of pre-ordered items, which will be communicated separately.</p>
+    </section>
+
+    <section>
+        <h2>2. Shipping Rates and Delivery Estimates</h2>
+        <p>Shipping charges for your order will be calculated and displayed at checkout.</p>
+        <ul>
+            <li><strong>Standard Shipping:</strong> 4-7 business days.</li>
+            <li><strong>Free Shipping:</strong> Available on all orders over ₹1999 (Code: FREESHIP).</li>
+            <li>We currently ship only within India.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>3. Shipment Confirmation and Order Tracking</h2>
+        <p>You will receive a Shipment Confirmation email containing your tracking number(s) once your order has shipped.</p>
+    </section>
+
+    <a th:href="@{/}" class="btn btn-secondary"><i class="fa fa-arrow-left me-2"></i> Back to Homepage</a>
+</div>
+
+<div th:replace="~{footer.html :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

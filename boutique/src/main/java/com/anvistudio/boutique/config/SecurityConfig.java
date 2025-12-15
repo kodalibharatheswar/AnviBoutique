@@ -79,6 +79,11 @@ public class SecurityConfig {
                                 "/reset-password",      // <--- ADDED
                                 // NEW: Newsletter Subscription Endpoint MUST be permitted
                                 "/newsletter/subscribe", // <--- ADDED
+                                // NEW: Policy Endpoints MUST be permitted
+                                "/policy_return", // <--- ADDED
+                                "/policy_privacy", // <--- ADDED
+                                "/policy_terms", // <--- ADDED
+                                "/policy_shipping", // <--- ADDED
                                 "/customer/profile/verify-new-email",
                                 "/css/**", "/js/**", "/images/**"
                         ).permitAll()

@@ -31,7 +31,8 @@
         border-bottom: 2px solid var(--brand);
         padding-bottom: 4px;
     }
-    .navbar-nav { align-items: center; }
+    .navbar-nav { align-items: center;
+    }
 
     .product-image { height: 100px; width: 100px; object-fit: cover; border-radius: 8px; }
     .cart-card { border-left: 5px solid var(--brand); }
@@ -160,9 +161,14 @@
           <h5 class="mb-0 fw-bolder text-success">₹ <span th:text="${#numbers.formatDecimal(cartTotal, 0, 'COMMA', 2, 'POINT')}">0.00</span></h5>
         </div>
 
-        <button class="btn btn-brand w-100 mt-4" th:disabled="${#lists.isEmpty(cartItems)}">
-          Proceed to Checkout
-        </button>
+        <!-- UPDATED CHECKOUT BUTTON -->
+        <a th:href="@{/checkout}"
+           class="btn btn-brand w-100 mt-4"
+           th:classappend="${#lists.isEmpty(cartItems)} ? 'disabled' : ''"
+           th:attr="aria-disabled=${#lists.isEmpty(cartItems)}">
+          <i class="fa fa-credit-card me-2"></i> Proceed to Secure Payment
+        </a>
+
       </div>
     </div>
   </div>
@@ -174,3 +180,182 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+
+
+<!--<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <title>My Shopping Cart - Anvi Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ &#45;&#45;brand:#ff7c04; &#45;&#45;dark:#222; }
+
+    /* FIX: Add Flexbox to Body to Push Footer Down */
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f7f7f7;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .main-content {
+        flex-grow: 1;
+    }
+
+    /* FIX: Navbar styling for consistency */
+    .offer-bar{ background: linear-gradient(90deg,#111, #222); color:#fff; padding:6px 0; font-size:0.95rem; }
+    .main-nav { background-color: var(&#45;&#45;dark) !important; color:#fff; }
+    .main-nav .nav-link:hover,
+    .main-nav .nav-link.active {
+        color: var(&#45;&#45;brand);
+        font-weight: 700;
+        border-bottom: 2px solid var(&#45;&#45;brand);
+        padding-bottom: 4px;
+    }
+    .navbar-nav { align-items: center; }
+
+    .product-image { height: 100px; width: 100px; object-fit: cover; border-radius: 8px; }
+    .cart-card { border-left: 5px solid var(&#45;&#45;brand); }
+    .btn-brand { background-color: var(&#45;&#45;brand); border-color: var(&#45;&#45;brand); color: white; }
+    .btn-brand:hover { background-color: #cc6300; border-color: #cc6300; }
+    .summary-card { background-color: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .qty-input { width: 60px; text-align: center; }
+
+    /* Price Discount Styles */
+    .original-price { text-decoration: line-through; color: #888; font-size: 0.8em; margin-right: 5px; }
+    .discount-badge { font-size: 0.7em; margin-left: 5px; }
+
+    /* NEW: Sale/Clearance Status Text in list item */
+    .item-sale-tag {
+        font-size: 0.75em;
+        font-weight: bold;
+        margin-left: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .item-sale { background-color: #e6f2ff; color: #007bff; } /* Light blue/blue */
+    .item-clearance { background-color: #f8d7da; color: #dc3545; } /* Light red/red */
+  </style>
+</head>
+<body>
+
+&lt;!&ndash; INCLUDE REUSABLE NAVBAR FRAGMENT &ndash;&gt;
+<div th:insert="~{navbar.html :: main-navbar(currentPage='cart')}"></div>
+
+<div class="main-content container mt-5">
+  <h1 class="mb-4 hero-title">Your Shopping Cart <i class="fa fa-shopping-cart"></i></h1>
+  <hr>
+
+  &lt;!&ndash; Flash Messages &ndash;&gt;
+  <div th:if="${cartMessage}" class="alert alert-success" role="alert" th:text="${cartMessage}"></div>
+  <div th:if="${cartError}" class="alert alert-danger" role="alert" th:text="${cartError}"></div>
+
+  <div class="row g-4">
+
+    &lt;!&ndash; Cart Items List &ndash;&gt;
+    <div class="col-lg-8">
+      <div th:if="${#lists.isEmpty(cartItems)}" class="alert alert-info text-center p-4">
+        <p class="lead mb-0">Your shopping cart is empty!</p>
+        <p class="mt-2">Start adding items from the <a th:href="@{/}" class="alert-link">Home Page</a>.</p>
+      </div>
+
+      <div th:unless="${#lists.isEmpty(cartItems)}" class="d-grid gap-3">
+        <div class="card cart-card shadow-sm p-3" th:each="item : ${cartItems}">
+          <div class="row align-items-center">
+
+            &lt;!&ndash; Image &ndash;&gt;
+            <div class="col-md-2 col-3">
+              <img th:src="${item.product.imageUrl != null ? item.product.imageUrl : 'https://placehold.co/100x100/ccc/333?text=Product'}"
+                   onerror="this.onerror=null; this.src='https://placehold.co/100x100/ccc/333?text=Error';"
+                   class="product-image"
+                   alt="Product Image">
+            </div>
+
+            &lt;!&ndash; Details &ndash;&gt;
+            <div class="col-md-5 col-9">
+              <h5 class="mb-1" th:text="${item.product.name}">Product Name</h5>
+              <p class="text-muted small mb-0" th:text="${item.product.category}">Category</p>
+
+              &lt;!&ndash; Unit Price Display (Updated for Discount & Sale Status) &ndash;&gt;
+              <p class="fw-bold fs-6 text-dark mb-0">
+                Unit Price:
+                <span th:if="${item.product.discountPercent > 0}" class="text-secondary">
+                    <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(item.product.price, 0, 'COMMA', 2, 'POINT')}">1000.00</span></span>
+                    <span class="badge bg-danger discount-badge" th:text="'-' + ${item.product.discountPercent} + '%'">-10%</span>
+                </span>
+                <span class="text-success">₹ <span th:text="${#numbers.formatDecimal(item.product.discountedPrice, 0, 'COMMA', 2, 'POINT')}">900.00</span></span>
+
+                &lt;!&ndash; NEW: SALE/CLEARANCE STATUS &ndash;&gt;
+                <span th:if="${item.product.isClearance()}" class="item-sale-tag item-clearance">
+                    CLEARANCE
+                </span>
+                <span th:unless="${item.product.isClearance() or item.product.discountPercent == 0}" class="item-sale-tag item-sale">
+                    SALE
+                </span>
+              </p>
+            </div>
+
+            &lt;!&ndash; Quantity Control &ndash;&gt;
+            <div class="col-md-3 col-6 mt-3 mt-md-0">
+              <form th:action="@{/cart/update}" method="post" class="d-flex align-items-center justify-content-md-start">
+                <input type="hidden" name="itemId" th:value="${item.id}">
+                <label for="quantity" class="me-2 small">Qty:</label>
+                <input type="number" name="quantity" th:value="${item.quantity}" min="0" class="form-control form-control-sm qty-input" onchange="this.form.submit()">
+              </form>
+              <small class="text-muted d-block mt-1">
+                Total: ₹<span th:text="${#numbers.formatDecimal(item.totalPrice, 0, 'COMMA', 2, 'POINT')}"></span>
+              </small>
+            </div>
+
+            &lt;!&ndash; Remove Action &ndash;&gt;
+            <div class="col-md-2 col-6 mt-3 mt-md-0 text-end">
+              <form th:action="@{/cart/remove/{itemId}(itemId=${item.id})}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    &lt;!&ndash; Cart Summary &ndash;&gt;
+    <div class="col-lg-4">
+      <div class="summary-card shadow-sm sticky-top" style="top: 20px;">
+        <h4 class="mb-4">Order Summary</h4>
+
+        <div class="d-flex justify-content-between mb-2">
+          <span>Subtotal:</span>
+          <span class="fw-bold">₹ <span th:text="${#numbers.formatDecimal(cartTotal, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+        </div>
+
+        <div class="d-flex justify-content-between mb-4">
+          <span>Shipping:</span>
+          <span>FREE</span>
+        </div>
+
+        <div class="d-flex justify-content-between pt-2 border-top">
+          <h5 class="mb-0">Estimated Total:</h5>
+          <h5 class="mb-0 fw-bolder text-success">₹ <span th:text="${#numbers.formatDecimal(cartTotal, 0, 'COMMA', 2, 'POINT')}">0.00</span></h5>
+        </div>
+
+        <button class="btn btn-brand w-100 mt-4" th:disabled="${#lists.isEmpty(cartItems)}">
+          Proceed to Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+&lt;!&ndash; Include the centralized footer fragment &ndash;&gt;
+<div th:replace="~{footer.html :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>-->

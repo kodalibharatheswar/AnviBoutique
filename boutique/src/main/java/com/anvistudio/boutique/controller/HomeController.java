@@ -91,6 +91,34 @@ public class HomeController {
         return "redirect:/contact";
     }
 
+    // =========================================================================
+    // NEW: Policy Mappings (CRITICAL FIX for accessing static policy pages)
+    // =========================================================================
+
+    @GetMapping("/policy_return")
+    public String returnPolicy() {
+        // Automatically resolves to src/main/resources/templates/policy_return.html
+        return "policy_return";
+    }
+
+    @GetMapping("/policy_privacy")
+    public String privacyPolicy() {
+        // Automatically resolves to src/main/resources/templates/policy_privacy.html
+        return "policy_privacy";
+    }
+
+    @GetMapping("/policy_terms")
+    public String termsAndConditions() {
+        // Automatically resolves to src/main/resources/templates/policy_terms.html
+        return "policy_terms";
+    }
+
+    @GetMapping("/policy_shipping")
+    public String shippingPolicy() {
+        // Automatically resolves to src/main/resources/templates/policy_shipping.html
+        return "policy_shipping";
+    }
+
 
     /**
      * NEW: Handler for the Customization Request page.
