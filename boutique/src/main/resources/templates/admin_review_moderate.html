@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <title>Admin - Review Moderation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --brand:#ff7c04; --dark:#222; }
+    body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+    .main-content { flex-grow: 1; }
+    .navbar { background-color: var(--dark) !important; }
+    .admin-title { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--dark); }
+
+    /* Admin Nav Styles (for consistency) */
+    .admin-nav .nav-link{ color: #fff; padding-bottom: 8px; transition: color 0.2s, border-bottom 0.2s; }
+    .admin-nav .nav-link:hover, .admin-nav .nav-link.active { color: var(--brand); font-weight: 500; border-bottom: 2px solid var(--brand); }
+    .admin-nav .nav-item { margin: 0 10px; }
+
+    .review-card { border-left: 5px solid #0d6efd; }
+    .rating-star { color: gold; }
+    .review-text { font-style: italic; }
+  </style>
+</head>
+<body>
+
+<!-- ADMIN NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand ms-3 d-flex align-items-center" href="/admin/dashboard">
+      <img th:src="@{/images/Chaknik_Logo.png}" alt="Anvi Studio Logo" style="height:40px; margin-right:8px;">
+      <span class="text-white">Anvi Studio Admin</span>
+    </a>
+
+    <div class="d-flex align-items-center collapse navbar-collapse" id="adminNav">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 admin-nav">
+        <!-- Links to other admin sections -->
+        <li class="nav-item"><a th:href="@{/admin/dashboard}" class="nav-link"><i class="fa fa-boxes-stacked me-1"></i> Products</a></li>
+        <li class="nav-item"><a th:href="@{/admin/orders}" class="nav-link"><i class="fa fa-receipt me-1"></i> Orders</a></li>
+        <li class="nav-item"><a th:href="@{/admin/reviews/moderate}" class="nav-link active"><i class="fa fa-star-half-alt me-1"></i> Reviews</a></li>
+        <li class="nav-item"><a th:href="@{/admin/contacts}" class="nav-link"><i class="fa fa-envelope me-1"></i> Messages</a></li>
+        <li class="nav-item"><a th:href="@{/admin/profile}" class="nav-link"><i class="fa fa-user-cog me-1"></i> Profile: <span sec:authentication="name">Admin</span></a></li>
+      </ul>
+    </div>
+    <div class="d-flex"><form th:action="@{/logout}" method="post"><button type="submit" class="btn btn-danger btn-sm me-3">Logout</button></form></div>
+  </div>
+</nav>
+
+<div class="main-content container mt-5">
+  <h2 class="mb-4 admin-title display-6"><i class="fa fa-star-half-alt me-2"></i> Review Moderation (<span th:text="${#lists.size(reviews)}">0</span> Pending)</h2>
+
+  <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert"><span th:text="${successMessage}"></span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert"><span th:text="${errorMessage}"></span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+
+  <div th:if="${#lists.isEmpty(reviews)}" class="alert alert-success text-center p-4">
+    <i class="fa fa-check-circle me-2"></i> No new reviews pending moderation!
+  </div>
+
+  <div class="row g-4 mb-5" th:unless="${#lists.isEmpty(reviews)}">
+    <div class="col-12" th:each="review : ${reviews}">
+      <div class="card shadow-sm p-4 review-card">
+
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <!-- Rating Display -->
+            <span th:each="i : ${#numbers.sequence(1, 5)}">
+                            <i class="fa-star" th:classappend="${i <= review.rating} ? 'fas rating-star' : 'far text-muted'"></i>
+                        </span>
+            <span class="ms-2 fw-bold" th:text="${review.rating} + '/5'"></span>
+
+            <p class="small text-muted mb-0">
+              By: <strong th:text="${review.user.username}"></strong>
+              on <span th:text="${#dates.format(review.datePosted, 'dd MMM yyyy')}"></span>
+            </p>
+          </div>
+
+          <div>
+            <h6 class="mb-1">Product:</h6>
+            <a th:href="@{'/products/' + ${review.product.id}}" target="_blank" class="text-decoration-none">
+              <strong th:text="${review.product.name}">Product Name</strong>
+            </a>
+            <p class="small text-muted mb-0">ID: <span th:text="${review.product.id}"></span></p>
+          </div>
+        </div>
+
+        <p class="review-text p-2 bg-light rounded" th:text="${review.comment}">Amazing quality, fast shipping!</p>
+
+        <!-- Moderation Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <!-- Approve Form -->
+          <form th:action="@{/admin/review/approve/{id}(id=${review.id})}" method="post" class="d-inline-block">
+            <button type="submit" class="btn btn-sm btn-success">
+              <i class="fa fa-check me-1"></i> Approve
+            </button>
+          </form>
+
+          <!-- Delete Form -->
+          <form th:action="@{/admin/review/delete/{id}(id=${review.id})}" method="post" class="d-inline-block"
+                onsubmit="return confirm('Reject and delete this review?')">
+            <button type="submit" class="btn btn-sm btn-danger">
+              <i class="fa fa-trash me-1"></i> Reject
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="py-4" style="background-color:var(--dark); color:#fff; margin-top: auto;">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6 mb-2">
+        <h5 class="mb-1">Anvi Studio Admin</h5>
+        <p class="small text-muted mb-0">Review Moderation Portal</p>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <p class="small mb-0">Version 1.0 &copy; 2025. All Rights Reserved.</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Payment Options - Anvi Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Load Bootstrap, Fonts, and Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root{ --brand:#ff7c04; --dark:#222; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f7f7f7; display: flex; flex-direction: column; min-height: 100vh; }
+        .main-content { flex-grow: 1; }
+        .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; color: #000; }
+        .payment-sidebar { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .summary-card { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: sticky; top: 20px;}
+
+        /* Myntra-style payment tab structure */
+        .payment-options-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            border-right: 1px solid #eee;
+        }
+        .payment-options-nav li a {
+            display: block;
+            padding: 12px 15px;
+            cursor: pointer;
+            color: var(--dark);
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border-left: 3px solid transparent;
+            text-decoration: none;
+        }
+        .payment-options-nav li a.active {
+            background-color: #f5f5f5;
+            border-left: 3px solid var(--brand);
+            font-weight: 700;
+            color: var(--brand);
+        }
+        .tab-content { padding-left: 20px; }
+        .btn-pay { background-color: var(--brand); border-color: var(--brand); color: white; padding: 10px 20px; }
+        .btn-pay:hover { background-color: #cc6300; border-color: #cc6300; }
+        .payment-method-header { margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar for consistency -->
+<div th:insert="~{navbar.html :: main-navbar(currentPage='cart')}"></div>
+
+<div class="main-content container mt-5">
+    <h1 class="hero-title display-5 mb-4"><i class="fa fa-credit-card me-2"></i> Payment Options</h1>
+
+    <!-- Breadcrumb showing flow status -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/cart}">Cart</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/customer/addresses}">Address</a></li>
+            <li class="breadcrumb-item active">Payment</li>
+        </ol>
+    </nav>
+    <hr>
+
+    <!-- Error Messages (from redirects or Stripe failures) -->
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+    <div class="row g-4 mb-5">
+
+        <!-- Left Column: Payment Options (Myntra-style Sidebar) -->
+        <div class="col-lg-8">
+            <div class="payment-sidebar">
+
+                <h5 class="mb-4">Delivery Address</h5>
+                <p class="small text-muted mb-4">
+                    Shipping to: <strong th:text="${shippingAddress.recipientName}">Recipient Name</strong>
+                    <span th:if="${shippingAddress.isDefault}" class="badge bg-secondary ms-2">Default</span>
+                    <br>
+                    <span th:text="${shippingAddress.streetAddress}"></span>,
+                    <span th:text="${shippingAddress.city}"></span> -
+                    <span th:text="${shippingAddress.pincode}"></span>,
+                    <span th:text="${shippingAddress.state}"></span>
+                    <br>
+                    <!-- Link back to address selection -->
+                    <a th:href="@{/customer/addresses}" class="small text-decoration-none" style="color: var(--brand);">Change Address</a>
+                </p>
+
+                <div class="row">
+                    <!-- Navigation Tabs -->
+                    <div class="col-md-4">
+                        <ul class="payment-options-nav nav flex-column nav-pills" id="paymentOptionsTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="card-tab" data-bs-toggle="tab" href="#cardTab" role="tab">Credit/Debit Card</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="cod-tab" data-bs-toggle="tab" href="#codTab" role="tab">Cash on Delivery</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link disabled" href="#upiTab" tabindex="-1" aria-disabled="true" style="color: #ccc;">UPI (Coming Soon)</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link disabled" href="#walletTab" tabindex="-1" aria-disabled="true" style="color: #ccc;">Wallets (Coming Soon)</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="col-md-8">
+                        <div class="tab-content" id="paymentOptionsTabContent">
+
+                            <!-- 1. Stripe Payment Element (Card) -->
+                            <div class="tab-pane fade show active" id="cardTab" role="tabpanel" aria-labelledby="card-tab">
+                                <p class="payment-method-header"><i class="fa fa-lock me-1"></i> Pay Securely by Card</p>
+
+                                <p class="text-muted small">We accept VISA, MasterCard, American Express, and Rupay cards.</p>
+
+                                <!-- Payment Element Container -->
+                                <div id="payment-element" class="mb-4">
+                                    <!-- Stripe will inject the card input fields here -->
+                                </div>
+
+                                <!-- Client-side Error Display -->
+                                <div id="payment-message" class="alert alert-danger" style="display:none;" role="alert"></div>
+
+                                <!-- Card Payment Submit Button -->
+                                <button id="card-submit-button" class="btn btn-pay w-100">
+                                    <i class="fa fa-spinner fa-spin me-2" id="spinner" style="display:none;"></i>
+                                    Pay ₹ <span th:text="${#numbers.formatDecimal(cartTotal, 0, 'COMMA', 2, 'POINT')}">13,599.15</span>
+                                </button>
+                                <p class="small text-muted mt-2">By clicking Pay, you agree to our Terms and Conditions.</p>
+                            </div>
+
+                            <!-- 2. Cash on Delivery (COD) -->
+                            <div class="tab-pane fade" id="codTab" role="tabpanel" aria-labelledby="cod-tab">
+                                <p class="payment-method-header"><i class="fa fa-hand-holding-usd me-1"></i> Cash on Delivery (COD)</p>
+
+                                <p>Pay in cash or using UPI/Card when your order is delivered to your address.</p>
+                                <p class="text-danger small">
+                                    Note: COD availability depends on courier service at pincode <strong th:text="${shippingAddress.pincode}"></strong>.
+                                    A small fee may apply (currently set to ₹0.00 for demo).
+                                </p>
+
+                                <!-- COD Form Submission -->
+                                <form th:action="@{/payment/confirm}" method="post" onsubmit="document.getElementById('cod-submit-button').disabled = true;">
+                                    <input type="hidden" name="addressId" th:value="${addressId}">
+                                    <input type="hidden" name="paymentMethod" value="COD">
+                                    <button type="submit" id="cod-submit-button" class="btn btn-pay btn-lg w-100 mt-3">
+                                        Place Order (Pay on Delivery)
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- 3. UPI (Placeholder) -->
+                            <div class="tab-pane fade" id="upiTab" role="tabpanel" aria-labelledby="upi-tab">
+                                <p class="payment-method-header">UPI / Net Banking</p>
+                                <p class="text-muted">Direct UPI/Net Banking integration is complex for demo environments. Please use the card option for secure electronic payment simulation.</p>
+                            </div>
+
+                            <!-- 4. Wallets (Placeholder) -->
+                            <div class="tab-pane fade" id="walletTab" role="tabpanel" aria-labelledby="wallet-tab">
+                                <p class="payment-method-header">Wallets / Pay Later</p>
+                                <p class="text-muted">Wallet and Pay Later options are not yet integrated. Please use the Card or COD option.</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Column: Order Summary (Price Details) -->
+        <div class="col-lg-4">
+            <div class="summary-card">
+                <h4 class="mb-4">Price Details</h4>
+                <div th:with="totalItems=${#lists.size(cartItems)}">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Items (<span th:text="${totalItems}"></span>)</span>
+                        <!-- Subtotal calculation remains the same -->
+                        <span th:text="'₹ ' + ${#numbers.formatDecimal(cartTotal, 0, 'COMMA', 2, 'POINT')}"></span>
+                    </div>
+                    <!-- Mock discount and fee fields for Myntra style -->
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Total Discount</span>
+                        <!-- In a real app, calculate actual discounts here -->
+                        <span class="text-danger">- ₹ <span th:text="${#numbers.formatDecimal(0, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Platform Fee</span>
+                        <span>₹ <span th:text="${#numbers.formatDecimal(0, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-4">
+                        <span>Shipping Fee</span>
+                        <span class="text-success fw-bold">FREE</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between pt-2 border-top">
+                        <h5 class="mb-0">Total Amount:</h5>
+                        <!-- Display final total (which is currently cartTotal) -->
+                        <h5 class="mb-0 fw-bolder text-success">₹ <span th:text="${#numbers.formatDecimal(cartTotal, 0, 'COMMA', 2, 'POINT')}">0.00</span></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Footer for completeness -->
+<div th:replace="~{footer.html :: footer}"></div>
+
+<!-- Stripe.js Library (Must be loaded from Stripe) -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<script th:inline="javascript">
+    /* JavaScript for Stripe Payment Element */
+    document.addEventListener('DOMContentLoaded', function() {
+        // Retrieve dynamic values from Thymeleaf model
+        const publishableKey = [[${publishableKey}]];
+        const clientSecret = [[${clientSecret}]];
+        const addressId = [[${addressId}]];
+        const appBaseUrl = "http://localhost:8080"; // Hardcode for client-side JS consistency
+
+        // Form references
+        const cardSubmitButton = document.getElementById('card-submit-button');
+        const spinner = document.getElementById('spinner');
+        const paymentMessage = document.getElementById('payment-message');
+        const cardTab = document.getElementById('cardTab');
+
+        if (!publishableKey || !clientSecret) {
+            console.error("Stripe initialization failed: Missing keys or cart empty.");
+            if(cardTab) {
+                paymentMessage.style.display = 'block';
+                paymentMessage.textContent = "Error: Payment initialization failed on the server. Please check your cart or contact support.";
+                cardSubmitButton.disabled = true;
+            }
+            return;
+        }
+
+        // 1. Initialize Stripe
+        const stripe = Stripe(publishableKey);
+
+        // 2. Initialize Payment Element
+        const appearance = { theme: 'stripe' };
+        const elements = stripe.elements({ appearance, clientSecret });
+        const paymentElement = elements.create('payment');
+
+        // Only mount if the container exists (i.e., we are viewing the Card tab)
+        const paymentElementContainer = document.getElementById('payment-element');
+        if (paymentElementContainer) {
+            paymentElement.mount('#payment-element');
+        }
+
+        // 3. Handle Form Submission for Card Payment
+        cardSubmitButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            // Show loading spinner and disable button
+            spinner.style.display = 'inline-block';
+            cardSubmitButton.disabled = true;
+            paymentMessage.style.display = 'none';
+
+            // Confirm payment with Stripe.js
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    // Send customer back to a simple success page or orders page after client confirmation
+                    // Note: Stripe requires an absolute return_url here.
+                    return_url: appBaseUrl + '/customer/orders',
+                },
+                redirect: 'if_required',
+            });
+
+            if (error) {
+                // Payment failed or authentication required
+                paymentMessage.textContent = error.message;
+                paymentMessage.style.display = 'block';
+                spinner.style.display = 'none';
+                cardSubmitButton.disabled = false;
+
+            } else if (paymentIntent) {
+                 // Check the status of the PaymentIntent after confirmation
+                 if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture') {
+                    // Payment succeeded! Now call the server endpoint to finalize the order (fulfillment).
+                    finalizeServerOrder(paymentIntent.id, addressId);
+
+                 } else if (paymentIntent.status === 'requires_action') {
+                     // Handle 3D Secure or other required actions by redirecting the user
+                     // Since we used 'if_required', Stripe will handle the client-side redirects for 3DS.
+                     // We just ensure the server is not stuck.
+                    paymentMessage.textContent = "Payment is pending 3D Secure verification...";
+                    // For demo, we rely on the return_url handling the final redirect.
+                 }
+                 else {
+                     paymentMessage.textContent = "Payment failed or status is unknown (" + paymentIntent.status + "). Please try again.";
+                     paymentMessage.style.display = 'block';
+                     spinner.style.display = 'none';
+                     cardSubmitButton.disabled = false;
+                 }
+            }
+        });
+
+        // 4. Server-Side Finalization after Successful Stripe Payment
+        function finalizeServerOrder(paymentIntentId, selectedAddressId) {
+            // Create a temporary form to POST the fulfillment request
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = [[@{/payment/confirm}]];
+
+            const intentInput = document.createElement('input');
+            intentInput.type = 'hidden';
+            intentInput.name = 'paymentIntentId';
+            intentInput.value = paymentIntentId;
+            form.appendChild(intentInput);
+
+            const addressInput = document.createElement('input');
+            addressInput.type = 'hidden';
+            addressInput.name = 'addressId';
+            addressInput.value = selectedAddressId;
+            form.appendChild(addressInput);
+
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = 'paymentMethod';
+            methodInput.value = 'CARD';
+            form.appendChild(methodInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+</script>
+</body>
+</html>

@@ -2,28 +2,31 @@ package com.anvistudio.boutique.controller;
 
 import com.anvistudio.boutique.model.Product;
 import com.anvistudio.boutique.service.ProductService;
+import com.anvistudio.boutique.service.ReviewService; // NEW IMPORT
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // NEW IMPORT
+import org.springframework.security.core.userdetails.UserDetails; // NEW IMPORT
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes; // NEW IMPORT
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors; // Required for populating filter options
 
 /**
- * Handles endpoints related to the product catalog and individual product pages.
+ * Handles endpoints related to the product catalog, individual product pages, and product reviews.
  */
 @Controller
 public class ProductController {
 
     private final ProductService productService;
+    private final ReviewService reviewService; // NEW INJECTION
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, ReviewService reviewService) {
         this.productService = productService;
+        this.reviewService = reviewService;
     }
 
 
@@ -64,12 +67,11 @@ public class ProductController {
 
         model.addAttribute("products", products);
 
-        // Prepare display header based on keyword or category
         String currentCategoryDisplay = category != null && !category.isEmpty() ? category : "All Products";
         if (keyword != null && !keyword.isEmpty()) {
             currentCategoryDisplay = "Search results for: '" + keyword + "'";
         }
-        model.addAttribute("currentCategory", currentCategoryDisplay); // UPDATED
+        model.addAttribute("currentCategory", currentCategoryDisplay);
 
         // Pass filter states back to the view for form persistence
         model.addAttribute("selectedSortBy", sortBy);
@@ -77,7 +79,7 @@ public class ProductController {
         model.addAttribute("selectedColor", color);
         model.addAttribute("minPriceValue", minPrice);
         model.addAttribute("maxPriceValue", maxPrice);
-        model.addAttribute("currentKeyword", keyword); // NEW: Pass keyword back
+        model.addAttribute("currentKeyword", keyword);
 
         // Pass filter lists to the view
         model.addAttribute("allCategories", getAllCategories());
@@ -87,20 +89,24 @@ public class ProductController {
     }
 
     /**
-     * NEW: Displays the individual product detail page.
-     * URL example: /products/123
+     * Displays the individual product detail page.
      */
     @GetMapping("/products/{id}")
     public String viewProductDetail(@PathVariable Long id, Model model) {
         Optional<Product> productOptional = productService.getProductById(id);
 
         if (productOptional.isEmpty() || !productOptional.get().getIsAvailable()) {
-            // Throw a 404 error if the product doesn't exist
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found.");
         }
 
         Product product = productOptional.get();
         model.addAttribute("product", product);
+
+        // Fetch Review Data for the product
+        model.addAttribute("averageRating", reviewService.getAverageRating(id));
+        model.addAttribute("reviewCount", reviewService.getReviewCount(id));
+        model.addAttribute("reviews", reviewService.getApprovedReviewsForProduct(id));
+
 
         // Suggest related products based on category (using the first 4 from the same category)
         List<Product> relatedProducts = productService.getProductsByCategoryOrAll(product.getCategory());
@@ -108,20 +114,36 @@ public class ProductController {
         relatedProducts.removeIf(p -> p.getId().equals(id));
         model.addAttribute("relatedProducts", relatedProducts.subList(0, Math.min(relatedProducts.size(), 4)));
 
-        return "product_detail"; // We need to create this new template
+        return "product_detail";
     }
 
-    // Helper class for passing color options to Thymeleaf
-    public static class FilterOption {
-        private String name;
-        private String hex;
+    /**
+     * NEW ENDPOINT: Handles submission of a new review for a product.
+     */
+    @PostMapping("/products/{id}/review")
+    public String submitProductReview(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable("id") Long productId,
+            @RequestParam("rating") int rating,
+            @RequestParam("comment") String comment,
+            RedirectAttributes redirectAttributes) {
 
-        public FilterOption(String name, String hex) {
-            this.name = name;
-            this.hex = hex;
+        if (userDetails == null) {
+            redirectAttributes.addFlashAttribute("errorMessage", "You must be logged in to submit a review.");
+            return "redirect:/login";
         }
 
-        public String getName() { return name; }
-        public String getHex() { return hex; }
+        try {
+            reviewService.submitReview(userDetails.getUsername(), productId, rating, comment);
+            redirectAttributes.addFlashAttribute("successMessage", "Review submitted! It will appear once approved by our team.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to submit review. An unexpected error occurred.");
+            System.err.println("Review submission error: " + e.getMessage());
+        }
+
+        // Redirect back to the product detail page
+        return "redirect:/products/" + productId + "#reviews";
     }
 }

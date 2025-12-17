@@ -6,6 +6,7 @@ import com.anvistudio.boutique.repository.AddressRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Optional; // NEW IMPORT
 
 @Service
 public class AddressService {
@@ -25,6 +26,14 @@ public class AddressService {
         User user = userService.findUserByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
         return addressRepository.findByUserId(user.getId());
+    }
+
+
+    /**
+     * NEW: Retrieves a single address by its ID.
+     */
+    public Optional<Address> getAddressById(Long addressId) {
+        return addressRepository.findById(addressId);
     }
 
     /**

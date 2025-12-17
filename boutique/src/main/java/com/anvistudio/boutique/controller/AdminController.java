@@ -1,24 +1,24 @@
 package com.anvistudio.boutique.controller;
 
 import com.anvistudio.boutique.model.Product;
+import com.anvistudio.boutique.model.Order; // NEW
+import com.anvistudio.boutique.model.Review; // NEW
 import com.anvistudio.boutique.service.ProductService;
 import com.anvistudio.boutique.service.UserService;
-import com.anvistudio.boutique.model.User; // NEW
-import com.anvistudio.boutique.service.ContactService; // NEW
+import com.anvistudio.boutique.service.ContactService;
+import com.anvistudio.boutique.service.OrderService; // NEW
+import com.anvistudio.boutique.service.ReviewService; // NEW
+import com.anvistudio.boutique.model.User;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable; // NEW
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Optional; // NEW
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Controller for admin-specific functionality, requiring ROLE_ADMIN access.
@@ -31,34 +31,31 @@ public class AdminController {
     private final ProductService productService;
     private final UserService userService;
     private final ContactService contactService;
+    private final OrderService orderService;
+    private final ReviewService reviewService;
 
-    public AdminController(ProductService productService, UserService userService, ContactService contactService) {
+    public AdminController(ProductService productService, UserService userService, ContactService contactService,
+                           OrderService orderService, ReviewService reviewService) {
         this.productService = productService;
         this.userService = userService;
         this.contactService = contactService;
+        this.orderService = orderService;
+        this.reviewService = reviewService;
     }
 
 
-    // --- NEW: Admin Login/Credential Check Pre-Filter (No change needed) ---
+    // --- Admin Security Check ---
     private String checkAdminCredentials(UserDetails userDetails, Model model, RedirectAttributes redirectAttributes) {
         String username = userDetails.getUsername();
-
-        // Only enforce for the hardcoded admin login ID
-        if ("admin".equals(username)) {
-            // Check if the user has updated credentials in the DB
-            if (!userService.isAdminCredentialsUpdated(username)) {
-
-                // If not updated, redirect them immediately to the profile page to force the update.
-                redirectAttributes.addFlashAttribute("forceUpdateMessage", "SECURITY ALERT: Please update your default login credentials immediately.");
-                return "redirect:/admin/profile";
-            }
+        if ("admin".equals(username) && !userService.isAdminCredentialsUpdated(username)) {
+            redirectAttributes.addFlashAttribute("forceUpdateMessage", "SECURITY ALERT: Please update your default login credentials immediately.");
+            return "redirect:/admin/profile";
         }
-        return null; // Credentials are fine, proceed to the target method
+        return null;
     }
 
 
     private String[] getAllCategories() {
-        // ... (Category list remains the same)
         return new String[]{
                 "Sarees", "Lehengas", "Kurtis", "Long Frocks", "Mom & Me", "Crop Top – Skirts",
                 "Handlooms", "Casual Frocks", "Ready To Wear", "Dupattas", "Kids wear",
@@ -66,16 +63,129 @@ public class AdminController {
         };
     }
 
+    // =========================================================================
+    // 1. Order Management & Moderation
+    // =========================================================================
+
+    /**
+     * Displays a comprehensive dashboard for order management (Processing, Returns, etc.).
+     */
+    @GetMapping("/orders")
+    public String adminOrderDashboard(Model model) {
+        // FIX: Use the new service layer method to retrieve all orders
+        List<Order> allOrders = orderService.getAllOrders();
+        model.addAttribute("orders", allOrders);
+        model.addAttribute("statusTypes", Order.OrderStatus.values());
+
+        return "admin_order_dashboard";
+    }
+
+    /**
+     * Endpoint to update an order's status (used for Shipping/Delivering).
+     */
+    @PostMapping("/order/updateStatus/{orderId}")
+    public String updateOrderStatus(@PathVariable Long orderId,
+                                    @RequestParam("newStatus") String newStatus,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            Order order = orderService.getOrderById(orderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Order not found."));
+
+            Order.OrderStatus status = Order.OrderStatus.valueOf(newStatus);
+            order.setStatus(status);
+
+            // FIX: Use the new public service method to save the order
+            orderService.saveOrder(order);
+
+            redirectAttributes.addFlashAttribute("successMessage", "Order #" + orderId + " status updated to " + newStatus + ".");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error updating order status: " + e.getMessage());
+        }
+        return "redirect:/admin/orders";
+    }
+
+    /**
+     * Endpoint to finalize a return/refund.
+     */
+    @PostMapping("/order/finalizeReturn/{orderId}")
+    public String finalizeReturn(@PathVariable Long orderId, RedirectAttributes redirectAttributes) {
+        try {
+            Order order = orderService.getOrderById(orderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Order not found."));
+
+            if (order.getStatus() != Order.OrderStatus.RETURN_REQUESTED) {
+                throw new IllegalStateException("Order must be RETURN_REQUESTED to finalize return.");
+            }
+
+            // Set status to indicate refund completion
+            order.setStatus(Order.OrderStatus.RETURNED);
+            // FIX: Use the new public service method to save the order
+            orderService.saveOrder(order);
+
+            System.out.println("LOG: Refund approved and finalized for Order: " + orderId);
+
+            redirectAttributes.addFlashAttribute("successMessage", "Return for Order #" + orderId + " approved and refund processed.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error finalizing return: " + e.getMessage());
+        }
+        return "redirect:/admin/orders";
+    }
 
 
-    // --- Dashboard & Product Listing (Filterable) ---
+
+    // =========================================================================
+    // 2. Review Moderation
+    // =========================================================================
+
+    /**
+     * Displays a page for admin review moderation (unapproved reviews).
+     */
+    @GetMapping("/reviews/moderate")
+    public String moderateReviews(Model model) {
+        // FIX: Use the new service layer method to retrieve unapproved reviews
+        List<Review> unapprovedReviews = reviewService.getUnapprovedReviews();
+        model.addAttribute("reviews", unapprovedReviews);
+        return "admin_review_moderate";
+    }
+
+    /**
+     * Approves a specific review.
+     */
+    @PostMapping("/review/approve/{reviewId}")
+    public String approveReview(@PathVariable Long reviewId, RedirectAttributes redirectAttributes) {
+        try {
+            reviewService.approveReview(reviewId);
+            redirectAttributes.addFlashAttribute("successMessage", "Review approved successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to approve review: " + e.getMessage());
+        }
+        return "redirect:/admin/reviews/moderate";
+    }
+
+    /**
+     * Deletes a specific review (moderation rejection).
+     */
+    @PostMapping("/review/delete/{reviewId}")
+    public String deleteReview(@PathVariable Long reviewId, RedirectAttributes redirectAttributes) {
+        try {
+            reviewService.deleteReview(reviewId);
+            redirectAttributes.addFlashAttribute("successMessage", "Review deleted successfully.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to delete review: " + e.getMessage());
+        }
+        return "redirect:/admin/reviews/moderate";
+    }
+
+    // =========================================================================
+    // 3. Product & Profile Management (Existing/Cleaned)
+    // =========================================================================
+
     @GetMapping("/dashboard")
     public String adminDashboard(
-            @AuthenticationPrincipal UserDetails userDetails, // Added for security check
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(value = "category", required = false) String category,
             Model model, RedirectAttributes redirectAttributes) {
 
-        // Run the security check first
         String securityRedirect = checkAdminCredentials(userDetails, model, redirectAttributes);
         if (securityRedirect != null) {
             return securityRedirect;
@@ -84,26 +194,10 @@ public class AdminController {
         model.addAttribute("products", productService.getProductsByCategoryOrAll(category));
         model.addAttribute("newProduct", new Product());
         model.addAttribute("currentCategory", category);
-        model.addAttribute("allCategories", getAllCategories()); // Pass categories for filtering/adding
+        model.addAttribute("allCategories", getAllCategories());
 
-        return "admin_dashboard"; // This must be the correct template for the admin UI
+        return "admin_dashboard";
     }
-
-
-
-    // --- Dashboard & Product Listing (Filterable) ---
-    /*@GetMapping("/dashboard")
-    public String adminDashboard(
-            @RequestParam(value = "category", required = false) String category,
-            Model model) {
-
-        model.addAttribute("products", productService.getProductsByCategoryOrAll(category));
-        model.addAttribute("newProduct", new Product());
-        model.addAttribute("currentCategory", category);
-        model.addAttribute("allCategories", getAllCategories()); // Pass categories for filtering/adding
-
-        return "admin_dashboard"; // This must be the correct template for the admin UI
-    }*/
 
     @PostMapping("/addProduct")
     public String addProduct(@ModelAttribute Product newProduct, RedirectAttributes redirectAttributes) {
@@ -116,8 +210,6 @@ public class AdminController {
         return "redirect:/admin/dashboard";
     }
 
-
-    // --- NEW: Product Delete Functionality ---
     @PostMapping("/product/delete/{id}")
     public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
@@ -129,28 +221,19 @@ public class AdminController {
         return "redirect:/admin/dashboard";
     }
 
-
-    // --- NEW: Edit Product Functionality ---
-
-    /**
-     * Displays the form to edit an existing product.
-     */
     @GetMapping("/product/edit/{id}")
     public String showEditProductForm(@PathVariable Long id, Model model) {
         Optional<Product> productOptional = productService.getProductById(id);
 
         if (productOptional.isEmpty()) {
-            // If product is not found, redirect back to dashboard
             return "redirect:/admin/dashboard";
         }
 
         model.addAttribute("product", productOptional.get());
-        model.addAttribute("allCategories", getAllCategories()); // Pass categories for selection
+        model.addAttribute("allCategories", getAllCategories());
 
-        return "admin_edit_product"; // NEW TEMPLATE
+        return "admin_edit_product";
     }
-
-
 
     // --- Contact Message Management ---
 
@@ -169,15 +252,6 @@ public class AdminController {
         return "admin_contact_messages";
     }
 
-
-
-    // --- NEW: Contact Message Management ---
-    /*@GetMapping("/contacts")
-    public String viewContactMessages(Model model) {
-        model.addAttribute("messages", contactService.getAllMessages());
-        return "admin_contact_messages"; // NEW TEMPLATE
-    }*/
-
     @PostMapping("/contact/delete/{id}")
     public String deleteContactMessage(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
@@ -189,80 +263,50 @@ public class AdminController {
         return "redirect:/admin/contacts";
     }
 
-    /**
-     * Handles the update of an existing product.
-     */
     @PostMapping("/product/update")
     public String updateProduct(@ModelAttribute("product") Product updatedProduct, RedirectAttributes redirectAttributes) {
         try {
-            productService.saveProduct(updatedProduct); // save() works for both insert and update
+            productService.saveProduct(updatedProduct);
             redirectAttributes.addFlashAttribute("successMessage", "Product updated successfully!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error updating product: " + e.getMessage());
         }
-        // Redirect back to the dashboard, potentially maintaining the current filter
         return "redirect:/admin/dashboard";
     }
 
-
-    // --- Admin Profile Update methods (Modified to fetch phone) ---
     @GetMapping("/profile")
     public String showAdminProfile(@AuthenticationPrincipal UserDetails userDetails, Model model) {
 
         String username = userDetails.getUsername();
-
-        // Fetch User object to get the recovery phone number
         Optional<User> adminUserOptional = userService.findUserByUsername(username);
         String recoveryPhone = adminUserOptional.map(User::getRecoveryPhoneNumber).orElse("");
 
-
-        // Check if a message was flashed to the model (only happens on forced update redirect)
         if (!model.containsAttribute("forceUpdateMessage")) {
-            // If the user navigated here normally, retrieve the update status from the DB
             boolean updated = userService.isAdminCredentialsUpdated(username);
-
             if (!updated && "admin".equals(username)) {
                 model.addAttribute("forceUpdateMessage", "SECURITY ALERT: Please update your default login credentials immediately.");
             }
         }
 
         model.addAttribute("currentUsername", username);
-        model.addAttribute("recoveryPhone", recoveryPhone); // NEW: Pass recovery phone
+        model.addAttribute("recoveryPhone", recoveryPhone);
 
         return "admin_profile";
     }
 
-
-
-    // --- Admin Profile Update methods (unchanged) ---
-   /* @GetMapping("/profile")
-    public String showAdminProfile(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        model.addAttribute("currentUsername", userDetails.getUsername());
-        return "admin_profile";
-    }*/
-
-
-
-
-    /**
-     * The POST handler for updating the admin profile.
-     * MODIFIED: Added recoveryPhoneNumber parameter.
-     */
     @PostMapping("/updateProfile")
     public String updateAdminProfile(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam("newUsername") String newUsername,
             @RequestParam("newPassword") String newPassword,
-            @RequestParam("recoveryPhoneNumber") String recoveryPhoneNumber, // NEW PARAMETER
+            @RequestParam("recoveryPhoneNumber") String recoveryPhoneNumber,
             RedirectAttributes redirectAttributes) {
 
         String currentUsername = userDetails.getUsername();
 
         try {
-            // Pass the new phone number to the service layer
             userService.updateAdminCredentials(currentUsername, newUsername, newPassword, recoveryPhoneNumber);
 
-            // NOTE: The user is logged out after updating credentials for security,
             redirectAttributes.addFlashAttribute("message", "Credentials updated successfully. Please log in with your new details.");
             return "redirect:/login?updated";
         } catch (IllegalStateException e) {
