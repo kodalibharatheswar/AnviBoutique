@@ -73,6 +73,23 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
 
+    // Add this method to ReviewService.java
+
+    /**
+     * NEW: Checks if a user has already reviewed a specific product.
+     * @param username The user's username (email).
+     * @param productId The product ID.
+     * @return true if the user has already reviewed this product, false otherwise.
+     */
+    public boolean hasUserReviewedProduct(String username, Long productId) {
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return false;
+        }
+
+        return reviewRepository.findByUserIdAndProductId(user.getId(), productId).isPresent();
+    }
+
     /**
      * Retrieves the average rating for a given product ID.
      */
