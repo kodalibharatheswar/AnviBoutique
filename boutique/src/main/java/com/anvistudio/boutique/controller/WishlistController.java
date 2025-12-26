@@ -30,9 +30,7 @@ public class WishlistController {
     @GetMapping("/wishlist")
     public String viewWishlist(@AuthenticationPrincipal UserDetails userDetails, Model model) {
 
-        // Check if the user is anonymous (unauthenticated)
         if (userDetails == null || "anonymousUser".equals(userDetails.getUsername())) {
-            // Redirect to the new public view if not logged in
             return "redirect:/wishlist-unauth";
         }
 
@@ -42,17 +40,22 @@ public class WishlistController {
         List<Wishlist> items = wishlistService.getWishlistItems(user.getId());
         model.addAttribute("wishlistItems", items);
 
-        return "wishlist"; // Maps to src/main/resources/templates/wishlist.html
+        return "wishlist";
     }
 
     /**
      * API Endpoint: Adds a product to the wishlist.
+     * FIX: Matches the Path Variable used in index.html: @{/wishlist/add/{productId}}
      */
     @PostMapping("/wishlist/add/{productId}")
     public String addProductToWishlist(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long productId,
             RedirectAttributes redirectAttributes) {
+
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
 
         try {
             wishlistService.addToWishlist(userDetails.getUsername(), productId);
@@ -61,8 +64,8 @@ public class WishlistController {
             redirectAttributes.addFlashAttribute("wishlistError", "Could not add item to wishlist: " + e.getMessage());
         }
 
-        // Typically redirects back to the product detail page or current view
-        return "redirect:/products/" + productId;
+        // FIX: Redirect to /wishlist instead of /products/{productId}
+        return "redirect:/wishlist";
     }
 
     /**
@@ -74,7 +77,6 @@ public class WishlistController {
             @PathVariable Long productId,
             RedirectAttributes redirectAttributes) {
 
-        // FIX: Use the new service method
         User user = userService.findUserByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Authenticated user not found in DB."));
 
@@ -85,7 +87,6 @@ public class WishlistController {
             redirectAttributes.addFlashAttribute("wishlistError", "Could not remove item from wishlist: " + e.getMessage());
         }
 
-        // Redirects back to the main wishlist view
         return "redirect:/wishlist";
     }
 }

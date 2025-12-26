@@ -341,18 +341,18 @@
                                 <!-- Actions for Authenticated Users (Cart/Wishlist) - Keep these separate and above the link wrapper z-index -->
                                 <div class="mt-2 btn-group" role="group" sec:authorize="isAuthenticated()">
                                     <!-- ADD TO CART -->
-                                    <form th:action="@{/cart/add}" method="post" class="d-inline w-50">
+                                    <!--<form th:action="@{/cart/add}" method="post" class="d-inline w-50">
                                         <input type="hidden" name="productId" th:value="${p.id}">
                                         <input type="hidden" name="quantity" value="1">
                                         <button type="submit" class="btn btn-brand w-100 btn-sm" th:disabled="${p.stockQuantity == 0}">
                                             <i class="fa fa-shopping-bag me-1"></i> Cart
                                         </button>
-                                    </form>
+                                    </form>-->
 
                                     <!-- ADD TO WISHLIST -->
-                                    <form th:action="@{/wishlist/add/{productId}(productId=${p.id})}" method="post" class="d-inline w-50">
+                                    <form th:action="@{/wishlist/add/{productId}(productId=${p.id})}" method="post" class="d-inline w-100">
                                         <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
-                                            <i class="fa-regular fa-heart"></i>
+                                            <i class="fa-regular fa-heart"></i> Wishlist
                                         </button>
                                     </form>
                                 </div>
